@@ -1,0 +1,20 @@
+[project]
+name = "st_nca"
+version = "0.0.1"
+authors = [
+  { name="Petrônio Cândido de Lima e Silva", email="petronio.candido@ifnmg.edu.br" },
+  { name="Omid Orang", email="Omid.orang2009@gmail.com" },
+  { name="Lucas Astore", email="astore.lucas@gmail.com" },
+]
+description = "Spatiotemporal Forecasting with Neural Cellular Automata"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/petroniocandido/st_nca"
+Issues = "https://github.com/petroniocandido/st_nca/issues"
