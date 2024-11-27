@@ -1,4 +1,3 @@
-from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 import copy
 import time
 from datetime import datetime, timezone, timedelta
@@ -13,8 +12,11 @@ import torch
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
+from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
 from tensordict import TensorDict
+
+from st_nca.common import DEVICE, resume, checkpoint
 
 
 def train_step(DEVICE, train, test, model, loss, mape, optim):
@@ -129,6 +131,6 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
     plt.tight_layout()
     display.display(plt.gcf())
 
-  plt.savefig(DEFAULT_PATH + "training-"+checkpoint_file+".pdf", dpi=150)
+  plt.savefig(checkpoint_file+".pdf", dpi=150)
 
   checkpoint(model, checkpoint_file)

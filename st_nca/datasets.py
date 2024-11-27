@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
+import copy
+import time
 
 from sklearn.manifold import SpectralEmbedding
 
@@ -13,10 +15,10 @@ from torch.utils.data import Dataset, DataLoader
 
 from tensordict import TensorDict
 
-
 from st_nca.embeddings.temporal import TemporalEmbedding, to_pandas_datetime
 from st_nca.embeddings.spatial import SpatialEmbedding
 from st_nca.embeddings.normalization import ZTransform
+from st_nca.tokenizer import NeighborhoodTokenizer
 
 
 class PEMS03:
@@ -26,10 +28,10 @@ class PEMS03:
       self.dtype = kwargs.get('dtype',torch.float64)
       self.device = kwargs.get('device','cpu')
 
-      edges = pd.read_csv(kwargs.get('edges_file',edges_file))
-      nodes = pd.read_csv(kwargs.get('nodes_file',nodes_file))
-      self.data = pd.read_csv(kwargs.get('data_file',data_file))
-      self.data['timestamp']= to_pandas_datetime(self.data['timestamp'].values)
+      edges = pd.read_csv(kwargs.get('edges_file','edges.csv'))
+      nodes = pd.read_csv(kwargs.get('nodes_file','nodes.csv'))
+      self.data = pd.read_csv(kwargs.get('data_file','data.csv'))
+      self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
 
       self.ztransform = ZTransform(torch.tensor(self.data[self.data.columns[1:]].values,
                                                 dtype=self.dtype, device=self.device),

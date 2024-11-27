@@ -6,7 +6,7 @@ import networkx as nx
 from sklearn.manifold import SpectralEmbedding
 
 import torch
-from torch import n
+from torch import nn
 
 from tensordict import TensorDict
 
