@@ -28,9 +28,9 @@ class PEMS03:
       self.dtype = kwargs.get('dtype',torch.float64)
       self.device = kwargs.get('device','cpu')
 
-      edges = pd.read_csv(kwargs.get('edges_file','edges.csv'))
-      nodes = pd.read_csv(kwargs.get('nodes_file','nodes.csv'))
-      self.data = pd.read_csv(kwargs.get('data_file','data.csv'))
+      edges = pd.read_csv(kwargs.get('edges_file','edges.csv'), engine='pyarrow')
+      nodes = pd.read_csv(kwargs.get('nodes_file','nodes.csv'), engine='pyarrow')
+      self.data = pd.read_csv(kwargs.get('data_file','data.csv'), engine='pyarrow')
       self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
 
       self.ztransform = ZTransform(torch.tensor(self.data[self.data.columns[1:]].values,

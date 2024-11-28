@@ -22,12 +22,14 @@ from st_nca.tokenizer import NeighborhoodTokenizer
 
 
 class FineTunningDataset(Dataset):
-  def __init__(self, pems, sensors, train = 0.7, **kwargs):
+  def __init__(self, pems, nodes = None, train = 0.7, **kwargs):
     super().__init__()
 
     self.pems : PEMS03 = pems
-    self.sensors = sensors
-    self.num_nodes = len(sensors)
+    self.nodes = sorted(nodes)
+    if self.nodes is None:
+      self.nodes = sorted([node for node in self.pems.G.nodes()])
+    self.num_nodes = len(nodes)
     self.increment_type = kwargs.get('increment_type','minute')
     self.increment = kwargs.get('increment',1)
     self.steps_ahead = kwargs.get('steps_ahead',10)
@@ -53,7 +55,7 @@ class FineTunningDataset(Dataset):
 
     X = {'timestamp': dt1}
     df1 = self.pems.data[(self.pems.data['timestamp'] == dt1)]
-    for ix, node in enumerate(self.sensors):
+    for ix, node in enumerate(self.nodes):
       X[str(node)] = df1[str(node)].values[0]
 
     y = torch.zeros(self.num_nodes * self.steps_ahead, dtype=self.pems.dtype, device=self.pems.device)
@@ -62,7 +64,7 @@ class FineTunningDataset(Dataset):
       dt2 = from_datetime_to_np(get_timestamp(from_np_to_datetime(date), self.increment_type, self.increment))
       df2 = self.pems.data[(self.pems.data['timestamp'] == dt2)]
 
-      for ix, node in enumerate(self.sensors):
+      for ix, node in enumerate(self.nodes):
         y[ct * self.num_nodes + ix] = df2[str(node)].values[0]
 
       date = from_np_to_datetime(dt2)
@@ -113,23 +115,23 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
 
   errors = []
   mapes = []
-  for ct in range(batch):
-    error = torch.tensor([0], dtype=model.dtype, device=model.device)
-    map = torch.tensor([0], dtype=model.dtype, device=model.device)
-    for X,y in train:
+  #for ct in range(batch):
+  #  error = torch.tensor([0], dtype=model.dtype, device=model.device)
+  #  map = torch.tensor([0], dtype=model.dtype, device=model.device)
+  for X,y in train:
 
-      initial_date = X['timestamp']
+    initial_date = X['timestamp']
 
-      optim.zero_grad()
+    optim.zero_grad()
 
-      X = X.to(DEVICE)
-      y = y.to(DEVICE)
+    X = X.to(DEVICE)
+    y = y.to(DEVICE)
 
-      y_pred = model.run(initial_date = initial_date, initial_state = X, iterations = iterations,
-                        increment_type = increment_type, increment = increment, return_type = 'tensor')
+    y_pred = model.run(initial_date = initial_date, initial_state = X, iterations = iterations,
+                      increment_type = increment_type, increment = increment, return_type = 'tensor')
 
-      error += loss(y, y_pred.squeeze())
-      map += mape(y, y_pred.squeeze())
+    error = loss(y, y_pred.squeeze())
+    map = mape(y, y_pred.squeeze())
 
     error.backward()
     optim.step()
@@ -148,21 +150,21 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
   errors_val = []
   mapes_val = []
   with torch.no_grad():
-    for ct in range(batch):
-      error_val = torch.tensor([0], dtype=model.dtype, device=model.device)
-      map_val = torch.tensor([0], dtype=model.dtype, device=model.device)
-      for X,y in test:
+    #for ct in range(batch):
+    #  error_val = torch.tensor([0], dtype=model.dtype, device=model.device)
+    #  map_val = torch.tensor([0], dtype=model.dtype, device=model.device)
+    for X,y in test:
 
-        initial_date = X['timestamp']
+      initial_date = X['timestamp']
 
-        X = X.to(DEVICE)
-        y = y.to(DEVICE)
+      X = X.to(DEVICE)
+      y = y.to(DEVICE)
 
-        y_pred = model.run(initial_date = initial_date, initial_state = X, iterations = iterations,
-                        increment_type = increment_type, increment = increment, return_type = 'tensor')
+      y_pred = model.run(initial_date = initial_date, initial_state = X, iterations = iterations,
+                      increment_type = increment_type, increment = increment, return_type = 'tensor')
 
-        error_val += loss(y, y_pred.squeeze())
-        map_val += mape(y, y_pred.squeeze())
+      error_val = loss(y, y_pred.squeeze())
+      map_val = mape(y, y_pred.squeeze())
 
       errors_val.append(error_val.cpu().item())
       mapes_val.append(map_val.cpu().item())
