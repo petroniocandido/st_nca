@@ -17,7 +17,8 @@ from tensordict import TensorDict
 from st_nca.common import DEVICE, checkpoint
 from st_nca.datasets import PEMS03
 from st_nca.gca import get_timestamp
-from st_nca.embeddings.temporal import from_datetime_to_np, from_np_to_datetime
+from st_nca.embeddings.temporal import from_datetime_to_pd, from_pd_to_datetime, \
+  datetime_to_str, str_to_datetime
 from st_nca.tokenizer import NeighborhoodTokenizer
 
 
@@ -36,9 +37,11 @@ class FineTunningDataset(Dataset):
 
     self.num_samples = self.pems.num_samples
 
-    self.index = np.random.shuffle([k for k in range(self.num_samples)])
+    self.index = [k for k in range(self.num_samples - self.steps_ahead)]
+    
+    np.random.shuffle(self.index)
 
-    self.train_split = int(train * self.num_samples)
+    self.train_split = int(train * self.num_samples) 
 
     self.is_validation = False
 
@@ -47,27 +50,33 @@ class FineTunningDataset(Dataset):
 
   def __getitem__(self, date):
     if isinstance(date, datetime):
-      dt1 = from_datetime_to_np(date)
-      dt2 = from_datetime_to_np(get_timestamp(date, self.increment_type, self.increment))
+      dt1 = from_datetime_to_pd(date)
     elif isinstance(date, np.datetime64):
       dt1 = date
-      dt2 = from_datetime_to_np(get_timestamp(from_np_to_datetime(date), self.increment_type, self.increment))
+    elif isinstance(date, int):
+      dt1 = self.pems.data['timestamp'][self.index[date]]
+    else:
+      raise Exception("Unknown date type: {}".format(type(date)))
 
-    X = {'timestamp': dt1}
-    df1 = self.pems.data[(self.pems.data['timestamp'] == dt1)]
-    for ix, node in enumerate(self.nodes):
-      X[str(node)] = df1[str(node)].values[0]
-
-    y = torch.zeros(self.num_nodes * self.steps_ahead, dtype=self.pems.dtype, device=self.pems.device)
-
-    for ct in range(0,self.steps_ahead):
-      dt2 = from_datetime_to_np(get_timestamp(from_np_to_datetime(date), self.increment_type, self.increment))
-      df2 = self.pems.data[(self.pems.data['timestamp'] == dt2)]
-
+    try:
+      X = {'timestamp': datetime_to_str(dt1)}
+      df1 = self.pems.data[(self.pems.data['timestamp'] == dt1)]
       for ix, node in enumerate(self.nodes):
-        y[ct * self.num_nodes + ix] = df2[str(node)].values[0]
+        X[str(node)] = df1[str(node)].values[0]
 
-      date = from_np_to_datetime(dt2)
+      y = torch.zeros(self.num_nodes * self.steps_ahead, dtype=self.pems.dtype, device=self.pems.device)
+
+      for ct in range(0,self.steps_ahead):
+        
+        dt2 = from_datetime_to_pd(get_timestamp(from_pd_to_datetime(dt1), self.increment_type, self.increment))
+        df2 = self.pems.data[(self.pems.data['timestamp'] == dt2)]
+
+        for ix, node in enumerate(self.nodes):
+          y[ct * self.num_nodes + ix] = torch.tensor(df2[str(node)].values, dtype=self.pems.dtype, device=self.pems.device)
+
+        dt1 = from_pd_to_datetime(dt2)
+    except:
+      print("ERROR!: Initial date: {}   Step: {}    Error date: {}".format(dt1, ct, dt2))
      
     return X,y
   
@@ -75,20 +84,20 @@ class FineTunningDataset(Dataset):
     tmp = copy.deepcopy(self)
     tmp.is_validation = False
     tmp.start = 0
-    tmp.end = self.train_split
-    tmp.num_samples = self.train_split
+    tmp.end = self.train_split - self.steps_ahead
+    tmp.num_samples = self.train_split - self.steps_ahead
     return tmp
 
   def test(self):
     tmp = copy.deepcopy(self)
     tmp.is_validation = True
-    tmp.start = self.train_split
-    tmp.end = self.num_samples
-    tmp.num_samples = self.num_samples - self.train_split
+    tmp.start = self.train_split 
+    tmp.end = self.num_samples - self.steps_ahead
+    tmp.num_samples = self.num_samples - self.train_split - self.steps_ahead
     return tmp
 
   def __len__(self):
-    return self.num_samples
+    return self.num_samples - self.steps_ahead
 
   def __iter__(self):
     for ix in self.index[self.start, self.end]:
@@ -120,15 +129,15 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
   #  map = torch.tensor([0], dtype=model.dtype, device=model.device)
   for X,y in train:
 
-    initial_date = X['timestamp']
-
     optim.zero_grad()
 
-    X = X.to(DEVICE)
-    y = y.to(DEVICE)
+    #X = X.to(DEVICE)
+    #y = y.to(DEVICE)
 
-    y_pred = model.run(initial_date = initial_date, initial_state = X, iterations = iterations,
-                      increment_type = increment_type, increment = increment, return_type = 'tensor')
+    y_pred = model.batch_run(X, iterations = iterations,
+                      increment_type = increment_type, increment = increment)
+    
+    print(y.size(), y_pred.size())
 
     error = loss(y, y_pred.squeeze())
     map = mape(y, y_pred.squeeze())
@@ -155,13 +164,11 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
     #  map_val = torch.tensor([0], dtype=model.dtype, device=model.device)
     for X,y in test:
 
-      initial_date = X['timestamp']
+      #X = X.to(DEVICE)
+      #y = y.to(DEVICE)
 
-      X = X.to(DEVICE)
-      y = y.to(DEVICE)
-
-      y_pred = model.run(initial_date = initial_date, initial_state = X, iterations = iterations,
-                      increment_type = increment_type, increment = increment, return_type = 'tensor')
+      y_pred = model.batch_run(X, iterations = iterations,
+                      increment_type = increment_type, increment = increment)
 
       error_val = loss(y, y_pred.squeeze())
       map_val = mape(y, y_pred.squeeze())

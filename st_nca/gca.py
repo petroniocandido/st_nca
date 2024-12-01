@@ -10,6 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from tensordict import TensorDict
 
+from st_nca.embeddings.temporal import str_to_datetime
 from st_nca.cellmodel import CellModel
 from st_nca.tokenizer import NeighborhoodTokenizer
 
@@ -69,6 +70,17 @@ class GraphCellularAutomata(nn.Module):
       tokens[ix, :, :] = self.tokenizer.tokenize(timestamp, current_state, node)
     return self.forward(tokens) 
   
+  def batch_run(self, initial_states, iterations, increment_type='minute', increment=1, **kwargs) -> torch.Tensor:
+    batch = len(initial_states['timestamp'])
+    state_history = torch.zeros(batch, self.num_nodes * iterations, dtype=self.dtype, device=self.device)
+    for ix in range(batch):
+      initial_state = TensorDict({key : initial_states[key][ix] for key in initial_states.keys() })
+      initial_date = str_to_datetime(initial_state['timestamp'])
+      state_history[ix, :] = self.run(initial_date, initial_state, iterations, 
+                                      increment_type, increment, return_type='tensor', 
+                                      **kwargs)
+    return state_history
+  
   def run(self, initial_date, initial_state, iterations, increment_type='minute', increment=1, **kwargs) -> torch.Tensor:
     return_type = kwargs.get('return_type','tensordict')
     current_state = TensorDict(initial_state)
@@ -84,7 +96,7 @@ class GraphCellularAutomata(nn.Module):
       if return_type == 'tensordict':
         state_history.append(new_state)
       else:
-        state_history[self.num_nodes * (ix-1) : self.num_nodes * ix] = result
+        state_history[self.num_nodes * (ix-1) : self.num_nodes * ix] = result.flatten()
 
     return state_history
   

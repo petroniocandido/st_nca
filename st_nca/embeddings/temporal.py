@@ -9,17 +9,19 @@ from tensordict import TensorDict
 def datetime_to_str(dt):
   return dt.strftime("%Y%m%d%H%M%S")
 
+def str_to_datetime(dt):
+  return datetime.strptime(dt, '%Y%m%d%H%M%S')
 
 def to_pandas_datetime(values):
   return pd.to_datetime(values, format='%m/%d/%Y %H:%M')
   
 
-def from_np_to_datetime(dt):
+def from_pd_to_datetime(dt):
   return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
   
 
-def from_datetime_to_np(date : datetime):
-  return np.datetime64(date.astimezone(timezone.utc))
+def from_datetime_to_pd(date : datetime):
+  return to_pandas_datetime(np.datetime64(date.astimezone(timezone.utc)))
 
 
 class TemporalEmbedding(nn.Module):
@@ -46,14 +48,14 @@ class TemporalEmbedding(nn.Module):
     return torch.sin(minute_of_day * self.pi2)
   
   def forward(self, dt):
-     date = from_np_to_datetime(dt)
+     date = from_pd_to_datetime(dt)
      we = self.week_embedding(date)
      me = self.minute_embedding(date)
      return torch.tensor([we, me], dtype=self.dtype, device=self.device)
   
   def __getitem__(self, date):
     if isinstance(date, np.datetime64):
-      date =  from_np_to_datetime(date)
+      date =  from_pd_to_datetime(date)
       return self.embeddings[datetime_to_str(date)]
     elif isinstance(date, datetime):
       return self.embeddings[datetime_to_str(date)]
