@@ -3,6 +3,8 @@ import pandas as pd
 import torch
 from torch import nn
 
+from tensordict import TensorDict
+
 from st_nca.embeddings import temporal, spatial, normalization
 
 
@@ -10,7 +12,7 @@ class NeighborhoodTokenizer(nn.Module):
   def __init__(self, **kwargs):
     super().__init__()
 
-    self.NULL_SYMBOL = -99
+    self.NULL_SYMBOL = 0
 
     self.device = kwargs.get('device','cpu')
     self.dtype = kwargs.get('dtype',torch.float32)

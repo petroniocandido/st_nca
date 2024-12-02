@@ -120,14 +120,15 @@ class PEMS03:
       m = 0
       while m < max_sensors:
         for sensor in next:
-          sensors.append(sensor)
-          m += 1
-          next.remove(sensor)
-          if m < max_sensors:
-            for neighbor in self.G.neighbors(sensor):
-              next.append(neighbor)
-          else:
-            break
+          if sensor not in sensors: 
+            sensors.append(sensor)
+            m += 1
+            next.remove(sensor)
+            if m < max_sensors:
+              for neighbor in self.G.neighbors(sensor):
+                next.append(neighbor)
+            else:
+              break
 
       return self.get_fewsensors_dataset(sensors, train = train, dtype = dtype, **kwargs), sensors
 
@@ -179,7 +180,7 @@ class SensorDataset(Dataset):
                dtype = torch.float64, **kwargs):
     super().__init__()
 
-    self.NULL_SYMBOL = -99
+    self.NULL_SYMBOL = 0
 
     self.behavior = kwargs.get('behavior','deterministic')
 
@@ -233,12 +234,21 @@ class SensorDataset(Dataset):
     else:
       x = torch.clone(self.X[index])
       r = np.random.rand()
-      if r >= .7:
+      if r >= .9:
+        # Remove the cell value and keep all the neighbors
+        x[0,:] = torch.full([self.token_dim], self.NULL_SYMBOL, dtype = self.dtype, device=self.device)
+      elif r >= .8:
+        # remove the cell value e remove all neighbor values
         x[0,self.value_index] = torch.tensor([self.NULL_SYMBOL], dtype = self.dtype, device=self.device)
-        #x[1:,:] = torch.full((self.max_length-1, self.token_dim),self.NULL_SYMBOL, dtype = self.dtype)
-      elif r >= .5:
         x[1:,:] = torch.full((self.max_length-1, self.token_dim),self.NULL_SYMBOL, dtype = self.dtype, device=self.device)
-      elif r >= .35:
+      elif r >= .7:
+        # Remove the cell value
+        x[0,self.value_index] = torch.tensor([self.NULL_SYMBOL], dtype = self.dtype, device=self.device)
+      elif r >= .6:
+        # Remove neighbor values
+        x[1:,:] = torch.full((self.max_length-1, self.token_dim),self.NULL_SYMBOL, dtype = self.dtype, device=self.device)
+      elif r >= .5:
+        # Introduce random noise
         x[:,self.value_index] = x[:,self.value_index] + torch.randn(self.max_length, dtype = self.dtype, device=self.device)/12
 
       return x, self.y[index]
