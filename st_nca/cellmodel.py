@@ -1,7 +1,9 @@
 import torch
 from torch import nn
 
-from st_nca.transformers import Transformer
+from st_nca.modules.transformers import Transformer
+
+from st_nca.modules.moe import SparseMixtureOfExperts
 
 
 class CellModel(nn.Module):
@@ -17,27 +19,51 @@ class CellModel(nn.Module):
     self.dtype = dtype
     self.mlps = mlp
 
+    self.use_moe = kwargs.get('use_moe',False)
+    
+
     self.transformers = nn.ModuleList([Transformer(num_heads, self.num_tokens, dim_token, feed_forward, transformer_activation,
                          dtype=self.dtype, device=self.device)
                          for k in range(num_transformers)])
 
     self.flat = nn.Flatten(1)
 
-    self.linear = nn.ModuleList()
-    for l in range(mlp):
-      in_dim = self.num_tokens * self.dim_token if l == 0 else mlp_dim
-      out_dim = 1 if l == mlp-1 else mlp_dim
-      self.linear.append(nn.Linear(in_dim, out_dim, dtype=self.dtype, device=self.device))
+    if not self.use_moe:
+
+      self.linear = nn.ModuleList()
+      for l in range(mlp):
+        in_dim = self.num_tokens * self.dim_token if l == 0 else mlp_dim
+        out_dim = 1 if l == mlp-1 else mlp_dim
+        self.linear.append(nn.Linear(in_dim, out_dim, dtype=self.dtype, device=self.device))
+
+    else:
+
+      self.moe = SparseMixtureOfExperts(dtype=self.dtype, device=self.device,
+                                        num_experts = 8, activate = 1, 
+                                        input_dim = self.num_tokens * self.dim_token, 
+                                        output_dim = mlp_dim,
+                                        expert_hidden_dim = mlp_dim,
+                                        num_layers = self.mlps,
+                                        activation = mlp_activation,
+                                        use_moe = False,
+                                        router_hidden_dim = 8,
+                                        router_type='lsh')
+      self.final = nn.Linear(mlp_dim, 1, dtype=self.dtype, device=self.device)
 
     self.activation = mlp_activation
     self.drop = nn.Dropout(.15)
+
 
   def forward(self, x):
     for transformer in self.transformers:
       x = transformer(x)
     z = self.flat(x)
-    for linear in self.linear:
-      z = self.activation(linear(self.drop(z)))
+    if not self.use_moe:
+      for linear in self.linear:
+        z = self.activation(linear(self.drop(z)))
+    else:
+      z = self.moe(z)
+      z = self.activation(self.final(self.drop(z)))
     return z
 
   def to(self, *args, **kwargs):
@@ -48,14 +74,22 @@ class CellModel(nn.Module):
       self.dtype = args[0]
     for k in range(self.num_transformers):
       self.transformers[k] = self.transformers[k].to(*args, **kwargs)
-    for k in range(self.mlps):
-      self.linear[k] = self.linear[k].to(*args, **kwargs)
+    if not self.use_moe:
+      for k in range(self.mlps):
+        self.linear[k] = self.linear[k].to(*args, **kwargs)
+    else:
+      self.moe = self.moe.to(*args, **kwargs)
+      self.final = self.final.to(*args, **kwargs)
     return self
 
   def train(self, *args, **kwargs):
     super().train(*args, **kwargs)
     for k in range(self.num_transformers):
       self.transformers[k] = self.transformers[k].train(*args, **kwargs)
-    for k in range(self.mlps):
-      self.linear[k] = self.linear[k].train(*args, **kwargs)
+    if not self.use_moe:
+      for k in range(self.mlps):
+        self.linear[k] = self.linear[k].train(*args, **kwargs)
+    else:
+      self.moe = self.moe.train(*args, **kwargs)
+      self.final = self.final.train(*args, **kwargs)
     return self

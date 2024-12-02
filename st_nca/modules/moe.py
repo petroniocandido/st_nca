@@ -1,5 +1,8 @@
+import numpy as np
 import torch
 from torch import nn
+
+from st_nca.modules.lsh import LSH
 
 class Expert(nn.Module):
     def __init__(self, **kwargs):
@@ -23,7 +26,7 @@ class Expert(nn.Module):
             self.layers = nn.ModuleList( [nn.Linear(input_dim, output_dim, device=self.device, dtype=self.dtype)])
         else:
             self.layers = nn.ModuleList( [nn.Linear(input_dim, hidden_dim, device=self.device, dtype=self.dtype)])
-            for k in range(1,self.num_layers-1):
+            for k in range(1,num_layers-1):
                 self.layers.append(nn.Linear(hidden_dim, hidden_dim, device=self.device, dtype=self.dtype))
             self.layers.append(nn.Linear(hidden_dim, output_dim, device=self.device, dtype=self.dtype))
 
@@ -50,11 +53,13 @@ class Expert(nn.Module):
         return self
 
 
-class Gating(nn.Module):
+class Router(nn.Module):
     def __init__(self, **kwargs):
-        super(Gating, self).__init__()
+        super(Router, self).__init__()
         self.device = kwargs.get('device',2)
         self.dtype = kwargs.get('dtype',2)
+
+        self.activate = kwargs.get('activate',1)
 
         input_dim = kwargs.get('input_dim',2)
         hidden_dim = kwargs.get('hidden_dim',2)
@@ -66,16 +71,18 @@ class Gating(nn.Module):
 
         # Layers
         self.layer1 = nn.Linear(input_dim, hidden_dim, device=self.device, dtype=self.dtype)
-        self.layer2 = nn.Linear(hidden_dim, hidden_dim, device=self.device, dtype=self.dtype)
-        self.layer3 = nn.Linear(hidden_dim, num_experts, device=self.device, dtype=self.dtype)
+        self.layer2 = nn.Linear(hidden_dim, num_experts, device=self.device, dtype=self.dtype)
 
 
     def forward(self, x):
         x = self.activation(self.layer1(self.dropout(x)))
         x = self.activation(self.layer2(self.dropout(x)))
-        x = self.activation(self.layer3(self.dropout(x)))
 
-        return torch.softmax(x, dim=1)
+        vals, indexes = torch.topk(x, k=self.activate, dim=1)
+
+        weights = torch.softmax(vals, dim=1)
+
+        return weights, indexes
     
     def to(self, *args, **kwargs):
         self = super().to(*args, **kwargs)
@@ -85,15 +92,30 @@ class Gating(nn.Module):
             self.dtype = args[0]
         self.layer1 = self.layer1.to(*args, **kwargs)
         self.layer2 = self.layer2.to(*args, **kwargs)
-        self.layer3 = self.layer3.to(*args, **kwargs)
         return self
 
     def train(self, *args, **kwargs):
         super().train(*args, **kwargs)
         self.layer1 = self.layer1.train(*args, **kwargs)
         self.layer2 = self.layer2.train(*args, **kwargs)
-        self.layer3 = self.layer3.train(*args, **kwargs)
         return self
+    
+
+def bin2dec(b, bits):
+    mask = 2 ** torch.arange(bits - 1, -1, -1).to(b.device, b.dtype)
+    return torch.sum(mask * b, -1)
+
+
+class LSHRouter(nn.Module):
+    def __init__(self, **kwargs):
+        super(LSHRouter, self).__init__()
+        self.output_dim = kwargs.get('output_dim',1)
+        self.lsh = LSH(**kwargs)
+
+    def forward(self, x):
+        batch = x.size(0)
+        x = self.lsh(x)
+        return torch.ones(batch, device=x.device, dtype=x.dtype), bin2dec(x, self.output_dim)
     
 
 class SparseMixtureOfExperts(nn.Module):
@@ -107,31 +129,36 @@ class SparseMixtureOfExperts(nn.Module):
         self.input_dim = kwargs.get('input_dim',1)
         self.output_dim = kwargs.get('output_dim',1)
 
-        gate_hidden_dim = kwargs.get('gate_hidden_dim',1)
+        router_hidden_dim = kwargs.get('router_hidden_dim',1)
 
         expert_hidden_dim = kwargs.get('expert_hidden_dim',1)
 
-        self.gating = Gating(hidden_dim = gate_hidden_dim,**kwargs)
-        
         self.experts = nn.ModuleList([
             Expert(hidden_dim = expert_hidden_dim, **kwargs)
             for k in range(self.num_experts)
         ])
-        
+
+        self.router_type = kwargs.get('router','lsh')
+
+        if self.router_type == 'mlp':
+            self.router = Router(hidden_dim = router_hidden_dim,**kwargs)
+        elif self.router_type == 'lsh': 
+            kwargs.pop('output_dim',1)
+            self.router = LSHRouter(output_dim = int(np.log2(self.num_experts)),**kwargs)
 
     def forward(self, x):
-        # Get the weights from the gating network
-        weights = self.gating(x)
+        weights, routes = self.router(x)
 
-        indexes = torch.topk(weights,k = self.activate, dim=1)
+        #print(torch.unique(routes, return_counts=True))
 
-        # Calculate the expert outputs
-        outputs = torch.stack(
-            [expert(x) for expert in self.experts], dim=2)
+        batch = x.size(0)
 
-        # Adjust the weights tensor shape to match the expert outputs
-        weights = weights.unsqueeze(1).expand_as(outputs)
+        output = torch.zeros(batch, self.output_dim, device=self.device, dtype=self.dtype)
 
-        # Multiply the expert outputs with the weights and
-        # sum along the third dimension
-        return torch.sum(outputs * weights, dim=2)
+        for ix, expert in enumerate(self.experts):
+            filter = (routes == ix).any(dim=-1)
+            selected_x = x[filter,:]
+            out = expert(selected_x)
+            output[filter, :] += out
+
+        return output
