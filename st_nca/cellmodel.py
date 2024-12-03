@@ -38,15 +38,17 @@ class CellModel(nn.Module):
 
     else:
 
+      num_experts = kwargs.get('num_experts',4)
+
       self.moe = SparseMixtureOfExperts(dtype=self.dtype, device=self.device,
-                                        num_experts = 8, activate = 1, 
+                                        num_experts = num_experts, activate = 1, 
                                         input_dim = self.num_tokens * self.dim_token, 
                                         output_dim = mlp_dim,
                                         expert_hidden_dim = mlp_dim,
                                         num_layers = self.mlps,
                                         activation = mlp_activation,
                                         use_moe = False,
-                                        router_hidden_dim = 8,
+                                        #router_hidden_dim = 8,
                                         router_type='lsh')
       self.final = nn.Linear(mlp_dim, 1, dtype=self.dtype, device=self.device)
 

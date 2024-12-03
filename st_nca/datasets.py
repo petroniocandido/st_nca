@@ -132,6 +132,9 @@ class PEMS03:
 
       return self.get_fewsensors_dataset(sensors, train = train, dtype = dtype, **kwargs), sensors
 
+    def get_sensor(self, index):
+      return int(self.data.columns[index + 1])
+    
     def plot_embeddings(self, limit=5000):
       pos_latlon = nx.circular_layout(self.G)
       pos_graph = nx.circular_layout(self.G)

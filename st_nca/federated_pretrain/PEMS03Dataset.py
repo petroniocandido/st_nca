@@ -9,14 +9,21 @@ class PEMS03Dataset(Dataset):
     def __init__(self, **kwargs):
         super(PEMS03Dataset, self).__init__("PEMS03", **kwargs)
 
+        pems = kwargs.get('pems',None)
+        self.client = kwargs.get('client',0)
+
+        self.sensor = int(pems.columns[self.client + 1])
+
+        self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='nondeterministic')
+
     def train(self) -> Dataset:
-        return copy.deepcopy(self)
+        return self.dataset.train()
 
     def validation(self) -> Dataset:
-        return copy.deepcopy(self) 
+        return self.dataset.test()
 
     def __len__(self):
-        return len(self.images)
+        return len(self.dataset.num_samples)
 
     def __getitem__(self, idx):
-        return self.transform(self.images[idx]), torch.LongTensor([self.labels[idx]])
+        return self.dataset[idx]
