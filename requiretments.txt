@@ -1,8 +1,0 @@
-numpy
-pandas
-matplotlib
-pyarrow.csv
-networkx
-torch
-tensordict
-torchmetrics
