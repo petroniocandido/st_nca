@@ -12,7 +12,7 @@ class PEMS03Dataset(Dataset):
         pems = kwargs.get('pems',None)
         self.client = kwargs.get('client',0)
 
-        self.sensor = int(pems.columns[self.client + 1])
+        self.sensor = pems.get_sensor(self.client)
 
         self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='nondeterministic')
 

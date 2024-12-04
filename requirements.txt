@@ -1,8 +1,4 @@
-numpy
-pandas
-matplotlib
 pyarrow
 networkx
-torch
 tensordict
 torchmetrics

@@ -1,5 +1,1 @@
-pyarrow
-networkx
-tensordict
-torchmetrics
 st_nca @ git+https://github.com/petroniocandido/st_nca@main
