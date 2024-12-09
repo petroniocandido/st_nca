@@ -3,11 +3,20 @@ from flautim.pytorch import Model, Dataset
 from flautim.pytorch.federated import Experiment
 import CellModel, FederatedSSLPreTrain, PEMS03Dataset
 
-from st_nca.datasets import PEMS03, SensorDataset
-from st_nca.cellmodel import CellModel
+import os, pip
 
 import torch
 from torch import nn
+
+
+try:
+    from st_nca.datasets import PEMS03, SensorDataset
+    from st_nca.cellmodel import CellModel
+except ModuleNotFoundError as ex:
+    for k, v in os.environ.items():
+        print(f'{k}={v}')
+    raise ex
+
 
 DTYPE = torch.float32
 NTRANSF = 2
