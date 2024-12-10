@@ -12,11 +12,11 @@ import torch
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
-from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
+#from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
 from tensordict import TensorDict
 
-from st_nca.common import DEVICE, resume, checkpoint
+from st_nca.common import SMAPE, get_device, resume, checkpoint
 
 
 def train_step(DEVICE, train, test, model, loss, mape, optim):
@@ -91,7 +91,8 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
   test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True)
 
   loss = nn.MSELoss()
-  mape = SymmetricMeanAbsolutePercentageError().to(DEVICE)
+  #mape = SymmetricMeanAbsolutePercentageError().to(DEVICE)
+  mape = SMAPE
 
   error_train = []
   mape_train = []

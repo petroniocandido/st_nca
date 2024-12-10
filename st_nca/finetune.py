@@ -10,11 +10,11 @@ import torch
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
-from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
+#from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
 from tensordict import TensorDict
 
-from st_nca.common import DEVICE, checkpoint
+from st_nca.common import get_device, checkpoint, SMAPE
 from st_nca.datasets import PEMS03
 from st_nca.gca import get_timestamp
 from st_nca.embeddings.temporal import from_datetime_to_pd, from_pd_to_datetime, \
@@ -200,7 +200,8 @@ def finetune_loop(DEVICE, dataset, model, display = None, **kwargs):
   test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True)
 
   loss = nn.MSELoss()
-  mape = SymmetricMeanAbsolutePercentageError().to(DEVICE)
+  #mape = SymmetricMeanAbsolutePercentageError().to(DEVICE)
+  mape = SMAPE
 
   error_train = []
   mape_train = []

@@ -6,7 +6,9 @@ import time
 import torch
 from torch import nn
 
-from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
+#from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
+from st_nca.common import SMAPE
+
 
 class MNISTExperiment(Experiment):
     def __init__(self, model, dataset, measures, logger, context, **kwargs):
@@ -15,7 +17,8 @@ class MNISTExperiment(Experiment):
         self.device = kwargs.get('device','cpu')
 
         self.loss = nn.MSELoss()
-        self.mape = SymmetricMeanAbsolutePercentageError()
+        #self.mape = SymmetricMeanAbsolutePercentageError()
+        self.mape = SMAPE
         self.optim = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0005)
         self.epochs = kwargs.get('epochs', 1)
         self.model = model
