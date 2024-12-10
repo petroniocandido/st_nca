@@ -1,13 +1,12 @@
 from flautim.pytorch.common import run_federated, get_argparser
 from flautim.pytorch import Model, Dataset
 from flautim.pytorch.federated import Experiment
-import CellModel, FederatedSSLPreTrain, PEMS03Dataset
 
 import os, pip
 
+
 import torch
 from torch import nn
-
 
 try:
     from st_nca.datasets import PEMS03, SensorDataset
@@ -17,6 +16,8 @@ except ModuleNotFoundError as ex:
     for k, v in os.environ.items():
         print(f'{k}={v}')
     raise ex
+
+import CellModel, FederatedSSLPreTrain, PEMS03Dataset
 
 
 DEVICE = get_device()

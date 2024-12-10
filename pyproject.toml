@@ -19,5 +19,4 @@ classifiers = [
 Homepage = "https://github.com/petroniocandido/st_nca"
 Issues = "https://github.com/petroniocandido/st_nca/issues"
 
-[tool.setuptools]
-py-modules = ["st_nca"]
+

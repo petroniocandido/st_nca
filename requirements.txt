@@ -3,5 +3,3 @@ pandas
 matplotlib
 pyarrow
 networkx
-tensordict
-torchmetrics

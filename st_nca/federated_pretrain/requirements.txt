@@ -1,4 +1,3 @@
 pyarrow
 networkx
-tensordict
 st_nca @ git+https://github.com/petroniocandido/st_nca@main
