@@ -12,12 +12,15 @@ from torch import nn
 try:
     from st_nca.datasets import PEMS03, SensorDataset
     from st_nca.cellmodel import CellModel
+    from st_nca.common import get_device
 except ModuleNotFoundError as ex:
     for k, v in os.environ.items():
         print(f'{k}={v}')
     raise ex
 
 
+DEVICE = get_device()
+print(DEVICE)
 DTYPE = torch.float32
 NTRANSF = 2
 NHEADS = 4
@@ -32,7 +35,7 @@ def create_model(pems):
                num_transformers = NTRANSF, num_heads = NHEADS, feed_forward = NTRANSFF, 
                transformer_activation = TRANSFACT,
                mlp = MLP, mlp_dim = MLPD, mlp_activation = MLPACT,
-               dtype = DTYPE)
+               dtype = DTYPE, device=DEVICE)
 
 def generate_client_fn(pems, context, measures, logger):
     
@@ -50,7 +53,8 @@ def generate_client_fn(pems, context, measures, logger):
         dataset = PEMS03Dataset.Dataset("PEMS03", batch_size=2048, client = id, pems = pems,
                                         xtype = torch.float32, ytype = torch.float32)
         
-        return FederatedSSLPreTrain.Experiment(model, dataset, measures, logger, context)
+        return FederatedSSLPreTrain.Experiment(model, dataset, measures, logger, context,
+                                               device = DEVICE)
         
     return create_client_fn
     
@@ -69,7 +73,8 @@ def evaluate_fn(pems, context, measures, logger):
         dataset = PEMS03Dataset.Dataset("PEMS03", batch_size=2048, client = 0, pems = pems,
                                         xtype = torch.float32, ytype = torch.float32)
         
-        experiment = FederatedSSLPreTrain.Experiment(model, dataset, measures, logger, context)
+        experiment = FederatedSSLPreTrain.Experiment(model, dataset, measures, logger, context,
+                                               device = DEVICE)
         
         mse, smape = experiment.validation_loop(dataset.dataloader(validation=True)) 
 

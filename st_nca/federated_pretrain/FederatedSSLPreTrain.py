@@ -24,6 +24,7 @@ class MNISTExperiment(Experiment):
         self.model = model
 
     def fit(self, parameters, config):
+        self.model = self.model.to(self.device)
         self.logger.log("Model training started", details="", object="experiment_fit", object_id=self.id )
 
         self.model.set_parameters(parameters)
