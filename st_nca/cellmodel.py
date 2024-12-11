@@ -41,7 +41,8 @@ class CellModel(nn.Module):
 
       self.moe = SparseMixtureOfExperts(dtype=self.dtype, device=self.device,
                                         num_experts = num_experts, activate = 1, 
-                                        input_dim = self.num_tokens * self.dim_token, 
+                                        input_dim = self.num_tokens * self.dim_token,
+                                        router_input_dim = self.dim_token,
                                         output_dim = mlp_dim,
                                         expert_hidden_dim = mlp_dim,
                                         num_layers = self.mlps,

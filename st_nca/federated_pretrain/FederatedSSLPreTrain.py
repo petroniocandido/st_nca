@@ -8,9 +8,9 @@ from torch import nn
 from st_nca.common import SMAPE
 
 
-class MNISTExperiment(Experiment):
+class FederatedExperiment(Experiment):
     def __init__(self, model, dataset, measures, logger, context, **kwargs):
-        super(MNISTExperiment, self).__init__(model, dataset, measures, logger, context, **kwargs)
+        super(FederatedExperiment, self).__init__(model, dataset, measures, logger, context, **kwargs)
 
         self.device = kwargs.get('device','cpu')
 

@@ -109,6 +109,7 @@ def bin2dec(b, bits):
 class LSHRouter(nn.Module):
     def __init__(self, **kwargs):
         super(LSHRouter, self).__init__()
+        self.input_dim = kwargs.get('input_dim',1)
         self.output_dim = kwargs.get('output_dim',1)
         self.lsh = LSH(**kwargs)
 
@@ -143,13 +144,20 @@ class SparseMixtureOfExperts(nn.Module):
         if self.router_type == 'mlp':
             self.router = Router(hidden_dim = router_hidden_dim,**kwargs)
         elif self.router_type == 'lsh': 
-            kwargs.pop('output_dim',1)
-            self.router = LSHRouter(output_dim = int(np.log2(self.num_experts)),**kwargs)
+            rin_dim = kwargs.pop('router_input_dim',1)
+            self.router = LSHRouter(
+                input_dim = rin_dim,
+                output_dim = int(np.log2(self.num_experts))
+                )
 
     def forward(self, x):
-        weights, routes = self.router(x)
+        if self.router_type == 'lsh': 
+            weights, routes = self.router(x[:,:self.router.input_dim])
+        else:
+            weights, routes = self.router(x)
 
-        #print(torch.unique(routes, return_counts=True))
+        print(torch.unique(routes, return_counts=True))
+        #print(x.shape)
 
         batch = x.size(0)
 
