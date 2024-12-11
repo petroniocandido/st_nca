@@ -1,8 +1,6 @@
 from flautim.pytorch.common import run_federated, get_argparser
-from flautim.pytorch import Model, Dataset
-from flautim.pytorch.federated import Experiment
 
-import os, pip
+import os
 
 
 import torch

@@ -5,7 +5,6 @@ from st_nca.modules.transformers import Transformer
 
 from st_nca.modules.moe import SparseMixtureOfExperts
 
-
 class CellModel(nn.Module):
   def __init__(self, num_tokens, dim_token,
                num_transformers, num_heads, feed_forward, transformer_activation = nn.GELU(),

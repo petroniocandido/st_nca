@@ -1,7 +1,4 @@
 from flautim.pytorch.Model import Model
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 class FlautimCellModel(Model):
     def __init__(self, context, **kwargs):

@@ -1,8 +1,6 @@
 from flautim.pytorch.federated.Experiment import Experiment
 from flautim.pytorch.common import metrics
 
-import numpy as np
-import time
 import torch
 from torch import nn
 

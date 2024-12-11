@@ -1,25 +1,19 @@
 import copy
 import time
 import numpy as np
-import pandas as pd
-import networkx as nx
 import matplotlib.pyplot as plt
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 
 import torch
 from torch import nn, optim
-from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
-from tensordict import TensorDict
-
-from st_nca.common import get_device, checkpoint, SMAPE
+from st_nca.common import checkpoint, SMAPE
 from st_nca.datasets import PEMS03
 from st_nca.gca import get_timestamp
 from st_nca.embeddings.temporal import from_datetime_to_pd, from_pd_to_datetime, \
-  datetime_to_str, str_to_datetime
-from st_nca.tokenizer import NeighborhoodTokenizer
+  datetime_to_str
 
 
 class FineTunningDataset(Dataset):

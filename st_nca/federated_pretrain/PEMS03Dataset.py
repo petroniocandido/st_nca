@@ -1,8 +1,5 @@
 from flautim.pytorch.Dataset import Dataset 
-import numpy as np
 import torch
-from torch.utils.data import DataLoader
-import copy
 
 class PEMS03Dataset(Dataset):
 
