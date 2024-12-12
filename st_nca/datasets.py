@@ -58,6 +58,8 @@ class PEMS03:
 
       del(nodes)
 
+      #self.sensors = sorted([k for k in self.G.nodes()])
+
       self.num_samples = len(self.data)
       self.token_dim = 7
 
@@ -71,7 +73,11 @@ class PEMS03:
                                              spatial_embedding = self.node_embeddings,
                                              temporal_embedding = self.time_embeddings)
 
-    
+    def get_sample(self, sensor, index):
+      #print(sensor, index)      
+      X = self.tokenizer.tokenize_sample(self.data, sensor, index)
+      y = torch.tensor(self.data[str(sensor)].values[index+1], dtype=self.dtype, device=self.device)
+      return X,y
 
     # Will returna a SensorDataset filled with the sensor & neighbors preprocessed data (X)
     # and the expected values for t+y (y)
@@ -123,51 +129,40 @@ class PEMS03:
 
       return self.get_fewsensors_dataset(sensors, train = train, dtype = dtype, **kwargs), sensors
 
+    def get_allsensors_dataset(self, **kwargs):
+      return AllSensorDataset(pems=self, **kwargs)
+    
     def get_sensor(self, index):
       return int(self.data.columns[index + 1])
     
-    def plot_embeddings(self, limit=5000):
-      pos_latlon = nx.circular_layout(self.G)
-      pos_graph = nx.circular_layout(self.G)
-      lat_max, lat_min = -np.inf, np.inf
-      lon_max, lon_min = -np.inf, np.inf
+    def to(self, *args, **kwargs):
+      if isinstance(args[0], str):
+        self.device = args[0]
+      else:
+        self.dtype = args[0]
+      return self
+    
 
-      graph1_max, graph1_min = -np.inf, np.inf
-      graph2_max, graph2_min = -np.inf, np.inf
-
-      for node in self.G.nodes():
-          emb = self.node_embeddings[node]
-          pos_graph[node] = emb[0:2]
-          pos_latlon[node] = emb[2:4]
-
-          lat_max, lat_min = max(lat_max, pos_latlon[node][0]), min(lat_min, pos_latlon[node][0])
-          lon_max, lon_min = max(lon_max, pos_latlon[node][1]), min(lon_min, pos_latlon[node][1])
-
-          graph1_max, graph1_min = max(graph1_max, pos_graph[node][0]), min(graph1_min, pos_graph[node][0])
-          graph2_max, graph2_min = max(graph2_max, pos_graph[node][1]), min(graph2_min, pos_graph[node][1])
-
-      fig, ax = plt.subplots(1, 3, figsize=(15,5))
-      nx.draw(self.G, pos_latlon, node_size=25, ax=ax[0], hide_ticks=False)
-      ax[0].set_xlim([lat_min, lat_max])
-      ax[0].set_ylim([lon_min, lon_max])
-      xticks = [k for k in np.linspace(lat_min, lat_max, 5)]
-      ax[0].set_xticks(xticks, [str(k) for k in xticks])
-      yticks = [k for k in np.linspace(lon_min, lon_max, 5)]
-      ax[0].set_yticks(yticks, [str(k) for k in yticks])
-      ax[0].tick_params(labelleft=True)
-
-      nx.draw(self.G, pos_graph, node_size=25, ax=ax[1], hide_ticks=False)
-      ax[1].set_xlim([graph1_min, graph1_max])
-      ax[1].set_ylim([graph2_min, graph2_max])
-
-      ax[2].plot(self.time_embeddings[:limit, 0], color='red', label='Weekly seasonality')
-      ax[2].plot(self.time_embeddings[:limit, 1], color='blue', label='Hourly seasonality')
-      #ax[2].legend(loc='upper right')
-      #limits = plt.axis("on")  # turn off axis
-      plt.show()
-      #plt.show()
-
-
+def self_supervised_transform(x, pems):
+  r = np.random.rand()
+  if r >= .9:
+    # Remove the cell value and keep all the neighbors
+    x[0,:] = torch.full([pems.token_dim], pems.NULL_SYMBOL, dtype = pems.dtype, device=pems.device)
+  elif r >= .8:
+    # remove the cell value e remove all neighbor values
+    x[0,pems.value_index] = torch.tensor([pems.NULL_SYMBOL], dtype = pems.dtype, device=pems.device)
+    x[1:,:] = torch.full((pems.max_length-1, pems.token_dim),pems.NULL_SYMBOL, dtype = pems.dtype, device=pems.device)
+  elif r >= .7:
+    # Remove the cell value
+    x[0,pems.value_index] = torch.tensor([pems.NULL_SYMBOL], dtype = pems.dtype, device=pems.device)
+  elif r >= .6:
+    # Remove neighbor values
+    x[1:,:] = torch.full((pems.max_length-1, pems.token_dim),pems.NULL_SYMBOL, dtype = pems.dtype, device=pems.device)
+  elif r >= .5:
+    # Introduce random noise
+    x[:,pems.value_index] = x[:,pems.value_index] + torch.randn(pems.max_length, dtype = pems.dtype, device=pems.device)/12
+  return x
+  
 
 class SensorDataset(Dataset):
   def __init__(self, name, X, y, train = 0.7,
@@ -227,24 +222,7 @@ class SensorDataset(Dataset):
       return self.X[index], self.y[index]
     else:
       x = torch.clone(self.X[index])
-      r = np.random.rand()
-      if r >= .9:
-        # Remove the cell value and keep all the neighbors
-        x[0,:] = torch.full([self.token_dim], self.NULL_SYMBOL, dtype = self.dtype, device=self.device)
-      elif r >= .8:
-        # remove the cell value e remove all neighbor values
-        x[0,self.value_index] = torch.tensor([self.NULL_SYMBOL], dtype = self.dtype, device=self.device)
-        x[1:,:] = torch.full((self.max_length-1, self.token_dim),self.NULL_SYMBOL, dtype = self.dtype, device=self.device)
-      elif r >= .7:
-        # Remove the cell value
-        x[0,self.value_index] = torch.tensor([self.NULL_SYMBOL], dtype = self.dtype, device=self.device)
-      elif r >= .6:
-        # Remove neighbor values
-        x[1:,:] = torch.full((self.max_length-1, self.token_dim),self.NULL_SYMBOL, dtype = self.dtype, device=self.device)
-      elif r >= .5:
-        # Introduce random noise
-        x[:,self.value_index] = x[:,self.value_index] + torch.randn(self.max_length, dtype = self.dtype, device=self.device)/12
-
+      x = self_supervised_transform(x, self)
       return x, self.y[index]
 
   def __len__(self):
@@ -264,4 +242,67 @@ class SensorDataset(Dataset):
       self.dtype = args[0]
     self.X = self.X.to(*args, **kwargs)
     self.y = self.y.to(*args, **kwargs)
+    return self
+  
+
+class AllSensorDataset(Dataset):
+  def __init__(self, pems, train = 0.7, **kwargs):
+    super().__init__()
+
+    self.pems = pems
+
+    self.max_length = pems.max_length
+
+    self.token_dim = pems.token_dim
+
+    self.behavior = kwargs.get('behavior','deterministic')
+
+    self.train_pct = train
+
+    self.train_split = int(train * self.pems.num_samples) 
+    self.test_split = self.pems.num_samples - self.train_split 
+
+    self.samples = self.pems.num_samples * self.pems.num_sensors
+
+    self.is_validation = False
+
+  def train(self) -> Dataset:
+    tmp = copy.deepcopy(self)
+    tmp.is_validation = False
+    return tmp
+
+  def test(self) -> Dataset:
+    tmp = copy.deepcopy(self)
+    tmp.is_validation = True
+    return tmp
+
+  def __getitem__(self, index):
+    if not self.is_validation:
+      train_sensor_ix = index // (self.train_split - 1)
+      train_data_ix = index % (self.train_split - 1)
+      sensor = self.pems.get_sensor(train_sensor_ix)
+      X,y = self.pems.get_sample(sensor, train_data_ix)
+    else:
+      train_sensor_ix = index // (self.test_split - 1)
+      train_data_ix = (index % (self.test_split - 1)) + self.train_split
+      sensor = self.pems.get_sensor(train_sensor_ix)
+      X,y = self.pems.get_sample(sensor, train_data_ix)
+    
+    if self.behavior == 'deterministic':
+      return X,y 
+    else:
+      return self_supervised_transform(X, self.pems), y    
+    
+  def __len__(self):
+    if not self.is_validation:
+      return (self.train_split - 1) * self.pems.num_sensors 
+    else:
+      return (self.test_split - 1) * self.pems.num_sensors 
+
+  def __iter__(self):
+    for ix in range(self.samples):
+      yield self[ix]
+
+  def to(self, *args, **kwargs):
+    self.pems = self.pems.to(*args, **kwargs)
     return self

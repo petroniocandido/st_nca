@@ -16,6 +16,7 @@ def train_step(DEVICE, train, test, model, loss, mape, optim):
 
   errors = []
   mapes = []
+
   for X,y in train:
 
     optim.zero_grad()

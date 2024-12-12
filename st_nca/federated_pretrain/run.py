@@ -49,7 +49,7 @@ def generate_client_fn(pems, context, measures, logger):
         model = FlautimCellModel.FlautimCellModel(context, suffix = str(sensor), 
                                         model = create_model(pems))
         
-        dataset = PEMS03Dataset.PEMS03Dataset("PEMS03", batch_size=2048, client = id, pems = pems,
+        dataset = PEMS03Dataset.PEMS03Dataset(pems = pems, client = id, batch_size=2048, 
                                         xtype = torch.float32, ytype = torch.float32)
         
         return FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
