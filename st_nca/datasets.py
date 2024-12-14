@@ -12,6 +12,8 @@ from st_nca.embeddings.spatial import SpatialEmbedding
 from st_nca.embeddings.normalization import ZTransform
 from st_nca.tokenizer import NeighborhoodTokenizer
 
+from st_nca.common import TensorDictDataframe
+
 class PEMS03:
 
     def __init__(self,**kwargs):
@@ -72,11 +74,34 @@ class PEMS03:
                                              ztransform = self.ztransform,
                                              spatial_embedding = self.node_embeddings,
                                              temporal_embedding = self.time_embeddings)
+      
+      self.NULL_SYMBOL = self.tokenizer.NULL_SYMBOL
 
+      self.td = kwargs.get('use_tensordict', False)
+
+      if self.td:
+        self.to_tensordict()
+        
+
+    def to_tensordict(self):
+      if not self.td:
+        cols1 = self.data.columns[0]
+        cols2 = self.data.columns[1:].tolist()
+
+        df1 = self.data[[cols1]]
+        df2 = self.data[cols2]
+
+        self.data = TensorDictDataframe(dtype=self.dtype, device = self.device, 
+                                        numeric_df=df2, nonnumeric_df=df1)
+        self.td = True
+
+    
     def get_sample(self, sensor, index):
-      #print(sensor, index)      
       X = self.tokenizer.tokenize_sample(self.data, sensor, index)
-      y = torch.tensor(self.data[str(sensor)].values[index+1], dtype=self.dtype, device=self.device)
+      if not self.td:    
+        y = torch.tensor(self.data[str(sensor)].values[index+1], dtype=self.dtype, device=self.device)
+      else:
+        y = self.data[str(sensor),index+1]
       return X,y
 
     # Will returna a SensorDataset filled with the sensor & neighbors preprocessed data (X)
@@ -133,7 +158,11 @@ class PEMS03:
       return AllSensorDataset(pems=self, **kwargs)
     
     def get_sensor(self, index):
-      return int(self.data.columns[index + 1])
+      if not self.td: 
+        return int(self.data.columns[index + 1])
+      else:
+        return int(self.data.numeric_columns[index])
+
     
     def to(self, *args, **kwargs):
       if isinstance(args[0], str):
@@ -143,24 +172,25 @@ class PEMS03:
       return self
     
 
-def self_supervised_transform(x, pems):
+#@torch.compile
+def self_supervised_transform(x, token_dim, max_length,value_index,NULL_SYMBOL,dtype,device):
   r = np.random.rand()
   if r >= .9:
     # Remove the cell value and keep all the neighbors
-    x[0,:] = torch.full([pems.token_dim], pems.NULL_SYMBOL, dtype = pems.dtype, device=pems.device)
+    x[0,:] = torch.full([token_dim], NULL_SYMBOL, dtype = dtype, device=device)
   elif r >= .8:
     # remove the cell value e remove all neighbor values
-    x[0,pems.value_index] = torch.tensor([pems.NULL_SYMBOL], dtype = pems.dtype, device=pems.device)
-    x[1:,:] = torch.full((pems.max_length-1, pems.token_dim),pems.NULL_SYMBOL, dtype = pems.dtype, device=pems.device)
+    x[0,value_index] = torch.tensor([NULL_SYMBOL], dtype = dtype, device=device)
+    x[1:,:] = torch.full((max_length-1, token_dim),NULL_SYMBOL, dtype = dtype, device=device)
   elif r >= .7:
     # Remove the cell value
-    x[0,pems.value_index] = torch.tensor([pems.NULL_SYMBOL], dtype = pems.dtype, device=pems.device)
+    x[0,value_index] = torch.tensor([NULL_SYMBOL], dtype = dtype, device=device)
   elif r >= .6:
     # Remove neighbor values
-    x[1:,:] = torch.full((pems.max_length-1, pems.token_dim),pems.NULL_SYMBOL, dtype = pems.dtype, device=pems.device)
+    x[1:,:] = torch.full((max_length-1, token_dim),NULL_SYMBOL, dtype = dtype, device=device)
   elif r >= .5:
     # Introduce random noise
-    x[:,pems.value_index] = x[:,pems.value_index] + torch.randn(pems.max_length, dtype = pems.dtype, device=pems.device)/12
+    x[:,value_index] = x[:,value_index] + torch.randn(max_length, dtype = dtype, device=device)/12
   return x
   
 
@@ -222,7 +252,8 @@ class SensorDataset(Dataset):
       return self.X[index], self.y[index]
     else:
       x = torch.clone(self.X[index])
-      x = self_supervised_transform(x, self)
+      x = self_supervised_transform(x, self.token_dim, self.max_length, self.value_index, 
+                                    self.NULL_SYMBOL,self.dtype,self.device)
       return x, self.y[index]
 
   def __len__(self):
@@ -291,7 +322,9 @@ class AllSensorDataset(Dataset):
     if self.behavior == 'deterministic':
       return X,y 
     else:
-      return self_supervised_transform(X, self.pems), y    
+      return self_supervised_transform(X, self.pems.token_dim, self.pems.max_length, 
+                                       self.pems.value_index, self.pems.NULL_SYMBOL,
+                                       self.pems.dtype,self.pems.device), y    
     
   def __len__(self):
     if not self.is_validation:

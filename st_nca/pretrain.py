@@ -7,7 +7,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
-from st_nca.common import SMAPE, checkpoint
+from st_nca.common import MAPE, SMAPE, checkpoint
 
 
 def train_step(DEVICE, train, test, model, loss, mape, optim):
@@ -19,7 +19,13 @@ def train_step(DEVICE, train, test, model, loss, mape, optim):
 
   for X,y in train:
 
-    optim.zero_grad()
+    # Batch times
+    #start_time = time.time()
+
+    #Performance advice found at: https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
+    #optim.zero_grad()
+    for param in model.parameters():
+      param.grad = None
 
     X = X.to(DEVICE)
     y = y.to(DEVICE)
@@ -35,6 +41,9 @@ def train_step(DEVICE, train, test, model, loss, mape, optim):
     # Grava as métricas de avaliação
     errors.append(error.cpu().item())
     mapes.append(map.cpu().item())
+
+    #print batch times
+    #print(round(time.time() - start_time, 3))
 
 
   ##################
@@ -59,6 +68,7 @@ def train_step(DEVICE, train, test, model, loss, mape, optim):
       errors_val.append(error_val.cpu().item())
       mapes_val.append(map_val.cpu().item())
 
+
   return errors, mapes, errors_val, mapes_val
 
 
@@ -79,8 +89,8 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
   lr = kwargs.get('lr', 0.001)
   optimizer = kwargs.get('optim', optim.Adam(model.parameters(), lr=lr, weight_decay=0.0005))
 
-  train_ldr = DataLoader(dataset.train(), batch_size=batch_size, shuffle=True)
-  test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True)
+  train_ldr = DataLoader(dataset.train(), batch_size=batch_size, shuffle=True, num_workers=2)
+  test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True, num_workers=2)
 
   loss = nn.MSELoss()
   #mape = SymmetricMeanAbsolutePercentageError().to(DEVICE)
@@ -95,8 +105,7 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
 
   for epoch in range(epochs):
 
-    if epoch % 5 == 0:
-      checkpoint(model, checkpoint_file)
+    checkpoint(model, checkpoint_file)
 
     errors_train, map_train, errors_val, map_val = train_step(DEVICE, train_ldr, test_ldr, model, loss, mape, optimizer)
 
@@ -127,3 +136,38 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
   plt.savefig(checkpoint_file+".pdf", dpi=150)
 
   checkpoint(model, checkpoint_file)
+
+
+def evaluate(model, in_sample, out_sample, num_samples = None):
+  metrics = {"MAPE": MAPE, "SMAPE": SMAPE}
+
+  model.eval()
+
+  results = {}
+
+  results['train'] = experiment_on_dataset(model, in_sample, num_samples, metrics)
+  results['test'] = experiment_on_dataset(model, out_sample, num_samples, metrics)
+
+  return results
+
+def experiment_on_dataset(model, sample, num_samples, metrics):
+    total = len(sample)
+    samples = num_samples if not num_samples is None else total
+    indexes = torch.randperm(samples, device=model.device)
+
+    X_batch = torch.zeros(samples, model.num_tokens, model.dim_token, 
+                      device=model.device, dtype=model.dtype)
+    y_batch = torch.zeros(samples, device=model.device, dtype=model.dtype)
+  
+    for ct,ix in enumerate(indexes):
+      X,y = sample[ix]
+      X_batch[ct,:] = X
+      y_batch[ct] = y
+
+    out = model(X_batch)
+
+    res = {}
+    for key, metric in metrics.items():
+      res[key] = metric(y_batch, out).detach().cpu()
+
+    return res

@@ -2,6 +2,11 @@ import torch
 from torch import nn
 
 
+#@torch.compile
+#def z(x, mu, sigma):
+#  return (x - mu) / sigma
+
+
 class ZTransform(nn.Module):
   def __init__(self, data, **kwargs):
     super().__init__()
@@ -12,6 +17,7 @@ class ZTransform(nn.Module):
     self.sigma = torch.std(data)
     
   def forward(self, x):
+     #return z(x, self.mu, self.sigma)
      return (x - self.mu) / self.sigma
   
   def to(self, *args, **kwargs):

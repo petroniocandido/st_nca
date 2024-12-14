@@ -10,9 +10,11 @@ def f_token_level(x,y):
 
 token_level = torch.func.vmap(f_token_level, in_dims=0)
 
+#@torch.compile
 def f_sequence_level(x,t,w):
   return token_level(x, w.repeat(t,1,1))
 
+#@torch.compile
 def f_batch_level(x, w):
   return token_level(x, w.repeat(x.size(0),1,1))
 

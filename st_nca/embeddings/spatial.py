@@ -29,8 +29,6 @@ class SpatialEmbedding(nn.Module):
     laplacian = SpectralEmbedding(n_components=laplacian_components) #, affinity='precomputed')
     laplacian_map = laplacian.fit_transform(M)
 
-    print(laplacian_map.shape)
-
     self.length = 0
     for ix, node in enumerate(graph.nodes()):
         emb = np.zeros(4)

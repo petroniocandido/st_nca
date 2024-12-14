@@ -3,6 +3,7 @@ import torch
 from torch import nn
 
 from tensordict import TensorDict
+from st_nca.common import TensorDictDataframe
 
 class NeighborhoodTokenizer(nn.Module):
   def __init__(self, **kwargs):
@@ -28,15 +29,20 @@ class NeighborhoodTokenizer(nn.Module):
       values = data[str(sensor)].values
     elif isinstance(data, TensorDict):
       values = data[str(sensor)]
+    elif isinstance(data, TensorDictDataframe):
+      values = data[str(sensor)]
                 
     return self.ztransform(torch.tensor(values, dtype=self.dtype, device=self.device))
     
   def normalized_sample(self, data, sensor, index):
     if isinstance(data, pd.DataFrame):
-      value = data[str(sensor)].values[index]
+      value = torch.tensor(data[str(sensor)].values[index], dtype=self.dtype, device=self.device)
     elif isinstance(data, TensorDict):
       value = data[str(sensor)]
-    return self.ztransform(torch.tensor(value, dtype=self.dtype, device=self.device))
+    elif isinstance(data, TensorDictDataframe):
+      value = data[str(sensor), index]
+
+    return self.ztransform(value)
   
   
   def tokenize(self, timestamp, values, node):
@@ -85,7 +91,8 @@ class NeighborhoodTokenizer(nn.Module):
     tokens = tokens.reshape(n, m, self.token_dim)
 
 
-    tokens = torch.hstack([tokens, torch.full((n,  self.max_length - m, self.token_dim), self.NULL_SYMBOL)])
+    tokens = torch.hstack([tokens, torch.full((n,  self.max_length - m, self.token_dim), self.NULL_SYMBOL,
+                                              dtype=self.dtype, device = self.device)])
 
     return tokens
 
@@ -95,6 +102,8 @@ class NeighborhoodTokenizer(nn.Module):
       dt = data['timestamp'][index]
     elif isinstance(data, TensorDict):
       dt = index
+    elif isinstance(data, TensorDictDataframe):
+      dt = data['timestamp', index]
 
     tim_emb = self.temporal_embedding[dt]
 
@@ -112,7 +121,8 @@ class NeighborhoodTokenizer(nn.Module):
 
     tokens = tokens.reshape(1, m, self.token_dim)
 
-    tokens = torch.hstack([tokens, torch.full((1, self.max_length - m, self.token_dim), self.NULL_SYMBOL)])
+    tokens = torch.hstack([tokens, torch.full((1, self.max_length - m, self.token_dim), self.NULL_SYMBOL,
+                                              dtype=self.dtype, device = self.device)])
 
     return tokens.reshape(self.max_length, self.token_dim)
     

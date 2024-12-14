@@ -35,16 +35,14 @@ def create_model(pems):
 
 def generate_client_fn(pems, context, measures, logger):
     
-    def create_client_fn(id):
+    def create_client_fn(ctx):
 
-        if str(id) != 'FL-Global':
-            sensor = pems.get_sensor(id)
+        if str(ctx) != 'FL-Global':
+            sensor = pems.get_sensor(int(ctx.node_config["partition-id"]))
+            id = int(ctx.node_config["partition-id"])
         else:
             sensor = 'FL-Global'
             id = 0
-
-        logger.log("Loading Sensor Dataset", details="id {} sensor {}".format(str(id), str(sensor)), 
-                   object="experiment_fit", object_id=context.IDexperiment )
         
         model = FlautimCellModel.FlautimCellModel(context, suffix = str(sensor), 
                                         model = create_model(pems))

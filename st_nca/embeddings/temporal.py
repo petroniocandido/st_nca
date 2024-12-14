@@ -14,12 +14,14 @@ def str_to_datetime(dt):
 
 def to_pandas_datetime(values):
   return pd.to_datetime(values, format='%m/%d/%Y %H:%M')
-  
+
+def from_np_to_datetime(dt):
+  dt = to_pandas_datetime(dt)
+  return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
 
 def from_pd_to_datetime(dt):
   return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
   
-
 def from_datetime_to_pd(date : datetime):
   return to_pandas_datetime(np.datetime64(date.astimezone(timezone.utc)))
 
@@ -55,7 +57,7 @@ class TemporalEmbedding(nn.Module):
   
   def __getitem__(self, date):
     if isinstance(date, np.datetime64):
-      date =  from_pd_to_datetime(date)
+      date =  from_np_to_datetime(date)
       return self.embeddings[datetime_to_str(date)]
     elif isinstance(date, datetime):
       return self.embeddings[datetime_to_str(date)]
