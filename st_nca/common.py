@@ -8,6 +8,12 @@ def MAPE(y, y_pred):
 def SMAPE(y, y_pred):
   return torch.mean(2*(y - y_pred).abs() / (y.abs() + y_pred.abs() + 1e-8))
 
+def MAE(y, y_pred):
+  return torch.mean((y - y_pred).abs())
+
+def RMSE(y, y_pred):
+  return torch.sqrt(torch.mean((y - y_pred) ** 2))
+
 def get_device():
   return 'cuda' if torch.cuda.is_available() else 'cpu'
 

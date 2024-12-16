@@ -63,11 +63,10 @@ def evaluate_fn(pems, context, measures, logger):
         The, the model will be evaluate on the test set (recall this is the
         whole MNIST test set)."""
 
-        model = FlautimCellModel.FlautimCellModel(context, name = "CellModel",
-                                        model = create_model(pems))
+        model = FlautimCellModel.FlautimCellModel(context, model = create_model(pems))
         model.set_parameters(parameters)
         
-        dataset = PEMS03Dataset.PEMS03Dataset("PEMS03", batch_size=2048, client = 0, pems = pems,
+        dataset = PEMS03Dataset.PEMS03Dataset(batch_size=2048, client = 0, pems = pems,
                                         xtype = torch.float32, ytype = torch.float32)
         
         experiment = FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
@@ -94,4 +93,4 @@ if __name__ == '__main__':
     evaluate_fn_callback = evaluate_fn(pems, context, measures, logger)
 
     run_federated(client_fn_callback, evaluate_fn_callback, 
-                  num_clients = pems.num_sensors, num_rounds = 10 )
+                  num_clients = pems.num_sensors, num_rounds = 50 )

@@ -11,7 +11,7 @@ class PEMS03Dataset(Dataset):
 
         self.sensor = pems.get_sensor(self.client)
 
-        self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='nondeterministic')
+        self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='deterministic')
 
     def train(self) -> Dataset:
         return self.dataset.train()
