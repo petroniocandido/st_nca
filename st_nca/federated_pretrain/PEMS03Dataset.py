@@ -9,9 +9,15 @@ class PEMS03Dataset(Dataset):
         pems = kwargs.get('pems',None)
         self.client = kwargs.get('client',0)
 
+        self.type = kwargs.get('type','federated')
+
         self.sensor = pems.get_sensor(self.client)
 
-        self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='deterministic')
+        if self.type == 'federated':
+            self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='deterministic')
+        
+        else:
+            self.dataset = pems.get_allsensors_dataset(dtype=torch.float32, behavior='deterministic')
 
     def train(self) -> Dataset:
         return self.dataset.train()

@@ -23,7 +23,6 @@ class PEMSBase:
       self.device = kwargs.get('device','cpu')
 
       edges = pd.read_csv(kwargs.get('edges_file','edges.csv'), engine='pyarrow')
-      nodes = pd.read_csv(kwargs.get('nodes_file','nodes.csv'), engine='pyarrow')
       self.data = pd.read_csv(kwargs.get('data_file','data.csv'), engine='pyarrow')
       self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
 
@@ -42,6 +41,8 @@ class PEMSBase:
 
       if self.latlon:
 
+        nodes = pd.read_csv(kwargs.get('nodes_file','nodes.csv'), engine='pyarrow')
+
         coordinates = {}
 
         for ix, node in enumerate(self.G.nodes()):
@@ -52,6 +53,8 @@ class PEMSBase:
 
         nx.set_node_attributes(self.G, coordinates)
 
+        del(nodes)
+
       self.node_embeddings = SpatialEmbedding(self.G, latlon=self.latlon, dtype=self.dtype, device=self.device)
 
       # The maximum sequence length is equal to the maximum graph degree, or the
@@ -61,9 +64,7 @@ class PEMSBase:
       # precompute and store all time embeddings to save processing
       self.time_embeddings = TemporalEmbedding(self.data['timestamp'], dtype=self.dtype, device=self.device)
 
-      self.num_sensors = len(nodes)
-
-      del(nodes)
+      self.num_sensors = self.G.number_of_nodes()
 
       #self.sensors = sorted([k for k in self.G.nodes()])
 
@@ -179,12 +180,22 @@ class PEMSBase:
 
 class PEMS03(PEMSBase):
     def __init__(self,**kwargs):
-      super(PEMS03, self).__init__(latlon = True, **kwargs)
+      super(PEMS03, self).__init__(latlon = True, 
+                                   edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/edges.csv",
+                                   nodes_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/nodes.csv",
+                                   data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/data.csv",
+                                   **kwargs)
 
 class PEMS04(PEMSBase):
     def __init__(self,**kwargs):
-      super(PEMS03, self).__init__(latlon = False, **kwargs)
+      super(PEMS03, self).__init__(latlon = False, 
+                                   edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/edges.csv",
+                                   data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/data.csv",
+                                   **kwargs)
 
 class PEMS08(PEMSBase):
     def __init__(self,**kwargs):
-      super(PEMS03, self).__init__(latlon = False, **kwargs)
+      super(PEMS03, self).__init__(latlon = False, 
+                                   edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/edges.csv",
+                                   data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/data.csv",
+                                   **kwargs)

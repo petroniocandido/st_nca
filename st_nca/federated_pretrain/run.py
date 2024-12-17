@@ -7,7 +7,8 @@ import torch
 from torch import nn
 
 
-from st_nca.datasets import PEMS03, SensorDataset
+from st_nca.datasets.PEMS import PEMS03
+from st_nca.datasets.datasets import SensorDataset
 from st_nca.cellmodel import CellModel as BaseCellModel
 from st_nca.common import get_device
 
@@ -83,9 +84,7 @@ if __name__ == '__main__':
 
     parser, context, backend, logger, measures = get_argparser()
 
-    edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/edges.csv"
-    nodes_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/nodes.csv"
-    data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/data.csv"
+    
 
     pems = PEMS03(edges_file=edges_file, nodes_file=nodes_file, data_file=data_file)
     
