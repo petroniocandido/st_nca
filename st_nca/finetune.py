@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
 from st_nca.common import checkpoint, SMAPE
-from st_nca.datasets import PEMS03
+from st_nca.datasets.PEMS import PEMS03
 from st_nca.gca import get_timestamp
 from st_nca.embeddings.temporal import from_datetime_to_pd, from_pd_to_datetime, \
   datetime_to_str
