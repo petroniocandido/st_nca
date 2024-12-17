@@ -15,23 +15,22 @@ class FederatedExperiment(Experiment):
 
         self.device = kwargs.get('device','cpu')
 
-        self.loss = nn.MSELoss()
+        self.loss = nn.MSELoss() 
         self.mape = SMAPE
         self.optim = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0005)
         self.epochs = kwargs.get('epochs', 50)
         self.model = model
 
     def fit(self, parameters, config):
+        self.epoch_fl = config["server_round"]
         self.model = self.model.to(self.device)
-        self.logger.log("Model training started", details="", object="experiment_fit", object_id=self.id )
+        self.logger.log(f"Round {self.epoch_fl} Model {self.model.suffix} training started", details="", object="experiment_fit", object_id=self.id )
 
         self.model.set_parameters(parameters)
-        
-        self.epoch_fl = config["server_round"]
 
         mse, mape = self.training_loop(self.dataset.dataloader())
 
-        self.logger.log("Model training finished", details="", object="experiment_fit", object_id=self.id )
+        self.logger.log(f"Round {self.epoch_fl} Model {self.model.suffix}  training finished", details="", object="experiment_fit", object_id=self.id )
 
         self.model.save()
 
@@ -39,13 +38,13 @@ class FederatedExperiment(Experiment):
 
     def evaluate(self, parameters, config):
 
-        self.logger.log("Model evaluation started", details="", object="experiment_evaluate", object_id=self.id )
+        self.logger.log(f"Round {self.epoch_fl} Model evaluation started", details="", object="experiment_evaluate", object_id=self.id )
         
         self.model.set_parameters(parameters)
         
         mse, mape = self.validation_loop(self.dataset.dataloader(validation = True))
 
-        self.logger.log("Model training finished", details="", object="experiment_evaluate", object_id=self.id )
+        self.logger.log(f"Round {self.epoch_fl} Model training finished", details="", object="experiment_evaluate", object_id=self.id )
         
         self.model.save()
         

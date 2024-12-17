@@ -19,11 +19,11 @@ DEVICE = get_device()
 print(DEVICE)
 DTYPE = torch.float32
 NTRANSF = 2
-NHEADS = 4
-NTRANSFF = 256
+NHEADS = 8
+NTRANSFF = 512
 TRANSFACT = nn.GELU()
 MLP = 2
-MLPD = 256
+MLPD = 512
 MLPACT = nn.GELU()
 
 def create_model(pems):
@@ -47,11 +47,11 @@ def generate_client_fn(pems, context, measures, logger):
         model = FlautimCellModel.FlautimCellModel(context, suffix = str(sensor), 
                                         model = create_model(pems))
         
-        dataset = PEMS03Dataset.PEMS03Dataset(pems = pems, client = id, batch_size=2048, 
+        dataset = PEMS03Dataset.PEMS03Dataset(pems = pems, client = id, batch_size=512, 
                                         xtype = torch.float32, ytype = torch.float32)
         
         return FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
-                                               device = DEVICE)
+                                               device = DEVICE, epochs = 5)
         
     return create_client_fn
     
@@ -93,4 +93,4 @@ if __name__ == '__main__':
     evaluate_fn_callback = evaluate_fn(pems, context, measures, logger)
 
     run_federated(client_fn_callback, evaluate_fn_callback, 
-                  num_clients = pems.num_sensors, num_rounds = 50 )
+                  num_clients = pems.num_sensors, num_rounds = 500 )
