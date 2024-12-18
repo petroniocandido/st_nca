@@ -1,4 +1,4 @@
-from flautim.pytorch.common import run_federated, get_argparser
+from flautim.pytorch.common import run_centralized, get_argparser
 
 import os
 
@@ -13,7 +13,7 @@ from st_nca.cellmodel import CellModel as BaseCellModel
 from st_nca.common import get_device
 
 
-import CellModel as FlautimCellModel, FederatedSSLPreTrain, PEMS03Dataset
+import CellModel as FlautimCellModel, CentralizedSSLPreTrain, PEMS03Dataset
 
 
 DEVICE = get_device()
@@ -51,8 +51,8 @@ def generate_client_fn(pems, context, measures, logger):
         dataset = PEMS03Dataset.PEMS03Dataset(pems = pems, client = id, batch_size=512, 
                                         xtype = torch.float32, ytype = torch.float32)
         
-        return FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
-                                               device = DEVICE, epochs = 5)
+        return CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
+                                               device = DEVICE, epochs = 20)
         
     return create_client_fn
     
@@ -70,7 +70,7 @@ def evaluate_fn(pems, context, measures, logger):
         dataset = PEMS03Dataset.PEMS03Dataset(batch_size=2048, client = 0, pems = pems,
                                         xtype = torch.float32, ytype = torch.float32)
         
-        experiment = FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
+        experiment = CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
                                                device = DEVICE)
         
         mse, smape = experiment.validation_loop(dataset.dataloader(validation=True)) 
@@ -89,6 +89,5 @@ if __name__ == '__main__':
     client_fn_callback = generate_client_fn(pems, context, measures, logger)
     evaluate_fn_callback = evaluate_fn(pems, context, measures, logger)
 
-    run_federated(client_fn_callback, evaluate_fn_callback, 
-                  num_clients = pems.num_sensors, num_rounds = 100,
-                   fraction_fit = .2, fraction_evaluate = 1.)
+    run_centralized(client_fn_callback, evaluate_fn_callback, 
+                  num_clients = pems.num_sensors, num_rounds = 500 )

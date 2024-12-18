@@ -45,7 +45,7 @@ class CentralizedExperiment(Experiment):
         
         mse, mape = self.validation_loop(self.dataset.dataloader(validation = True))
 
-        self.logger.log(f"Model training finished", details="", object="experiment_evaluate", object_id=self.id )
+        self.logger.log(f"Model evalutaion finished", details="", object="experiment_evaluate", object_id=self.id )
         
         self.model.save()
         

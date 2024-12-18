@@ -14,7 +14,7 @@ class PEMS03Dataset(Dataset):
         self.sensor = pems.get_sensor(self.client)
 
         if self.type == 'federated':
-            self.dataset = pems.get_sensor_dataset(self.sensor, dtype=torch.float32, behavior='deterministic')
+            self.dataset = pems.get_breadth_dataset(self.sensor, max_sensors = 20, dtype=torch.float32, behavior='deterministic')
         
         else:
             self.dataset = pems.get_allsensors_dataset(dtype=torch.float32, behavior='deterministic')
