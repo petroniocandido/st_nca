@@ -146,12 +146,12 @@ class AllSensorDataset(Dataset):
       train_data_ix = index % (self.train_split - 1)
       sensor = self.pems.get_sensor(train_sensor_ix)
       X,y = self.pems.get_sample(sensor, train_data_ix)
-      print(train_sensor_ix, sensor, train_data_ix)
+      #print(train_sensor_ix, sensor, train_data_ix)
     else:
       train_sensor_ix = index // (self.test_split - 1)
       train_data_ix = (index % (self.test_split - 1)) + self.train_split
       sensor = self.pems.get_sensor(train_sensor_ix)
-      print(train_sensor_ix, sensor, train_data_ix)
+      #print(train_sensor_ix, sensor, train_data_ix)
       X,y = self.pems.get_sample(sensor, train_data_ix)
     
     if self.behavior == 'deterministic':

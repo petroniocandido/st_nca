@@ -65,7 +65,7 @@ class FederatedExperiment(Experiment):
         errors = None
         mapes = None
         for epoch in range(self.epochs):
-            self.logger.log(prefix + " Training Epoch {epoch}", object="experiment_fit", object_id=self.id )
+            self.logger.log(prefix + f" Training Epoch {epoch}", object="experiment_fit", object_id=self.id )
             for X,y in data_loader:
 
                 self.optim.zero_grad()
@@ -91,8 +91,14 @@ class FederatedExperiment(Experiment):
         self.model.eval()
         errors = []
         mapes = []
+        prefix = f"Round {self.epoch_fl} " 
         with torch.no_grad():
+            ct = 0
             for X,y in data_loader:
+
+                self.logger.log(prefix + f" Evaluation batch {ct}", object="experiment_evaluate", object_id=self.id )
+                ct += 1
+                
                 X = X.to(self.device)
                 y = y.to(self.device)
                 y_pred = self.model.forward(X)
