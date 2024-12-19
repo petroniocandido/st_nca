@@ -7,13 +7,13 @@ import torch
 from torch import nn
 
 
-from st_nca.datasets.PEMS import PEMS03
+from st_nca.datasets.PEMS import PEMS03, PEMS04, PEMS08
 from st_nca.datasets.datasets import SensorDataset
 from st_nca.cellmodel import CellModel as BaseCellModel
 from st_nca.common import get_device
 
 
-import CellModel as FlautimCellModel, FederatedSSLPreTrain, PEMS03Dataset
+import CellModel as FlautimCellModel, FederatedSSLPreTrain, PEMSDataset as PEMSDataset
 
 
 DEVICE = get_device()
@@ -48,11 +48,12 @@ def generate_client_fn(pems, context, measures, logger):
         model = FlautimCellModel.FlautimCellModel(context, suffix = str(sensor), 
                                         model = create_model(pems))
         
-        dataset = PEMS03Dataset.PEMS03Dataset(pems = pems, client = id, batch_size=512, 
-                                        xtype = torch.float32, ytype = torch.float32)
+        dataset = PEMSDataset.PEMSDataset(pems = pems, client = id, batch_size=2048, 
+                                          type = 'federated', neighbors=10,
+                                          xtype = torch.float32, ytype = torch.float32)
         
         return FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
-                                               device = DEVICE, epochs = 5)
+                                               device = DEVICE, epochs = 20)
         
     return create_client_fn
     
@@ -67,8 +68,10 @@ def evaluate_fn(pems, context, measures, logger):
         model = FlautimCellModel.FlautimCellModel(context, model = create_model(pems))
         model.set_parameters(parameters)
         
-        dataset = PEMS03Dataset.PEMS03Dataset(batch_size=2048, client = 0, pems = pems,
-                                        xtype = torch.float32, ytype = torch.float32)
+        dataset = PEMSDataset.PEMSDataset(train_split = .95, batch_size=2048, 
+                                          client = 0, pems = pems,
+                                          type = 'all',
+                                          xtype = torch.float32, ytype = torch.float32)
         
         experiment = FederatedSSLPreTrain.FederatedExperiment(model, dataset, measures, logger, context,
                                                device = DEVICE)
@@ -91,4 +94,4 @@ if __name__ == '__main__':
 
     run_federated(client_fn_callback, evaluate_fn_callback, 
                   num_clients = pems.num_sensors, num_rounds = 100,
-                   fraction_fit = .2, fraction_evaluate = 1.)
+                   fraction_fit = .15, fraction_evaluate = .1)

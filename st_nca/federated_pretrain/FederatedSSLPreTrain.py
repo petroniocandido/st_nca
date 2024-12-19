@@ -20,17 +20,19 @@ class FederatedExperiment(Experiment):
         self.optim = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0005)
         self.epochs = kwargs.get('epochs', 50)
         self.model = model
+        self.log_msg_infix = f' Client {self.dataset.client} Model {self.dataset.sensor} '
 
     def fit(self, parameters, config):
         self.epoch_fl = config["server_round"]
+        prefix = f"Round {self.epoch_fl} " + self.log_msg_infix
         self.model = self.model.to(self.device)
-        self.logger.log(f"Round {self.epoch_fl} Model {self.model.suffix} training started", object="experiment_fit", object_id=self.id )
+        self.logger.log(prefix + " training started", object="experiment_fit", object_id=self.id )
 
         self.model.set_parameters(parameters)
 
         mse, mape = self.training_loop(self.dataset.dataloader())
 
-        self.logger.log(f"Round {self.epoch_fl} Model {self.model.suffix}  training finished", object="experiment_fit", object_id=self.id )
+        self.logger.log(prefix + " training finished", object="experiment_fit", object_id=self.id )
 
         self.measures.log(self, metrics.SMAPE, mape, validation=False)
         self.measures.log(self, metrics.MSE, mse, validation=False)
@@ -41,13 +43,15 @@ class FederatedExperiment(Experiment):
 
     def evaluate(self, parameters, config):
 
-        self.logger.log(f"Round {self.epoch_fl} Model evaluation started", object="experiment_evaluate", object_id=self.id )
+        prefix = f"Round {self.epoch_fl} " + self.log_msg_infix
+
+        self.logger.log(prefix + " evaluation started", object="experiment_evaluate", object_id=self.id )
         
         self.model.set_parameters(parameters)
         
         mse, mape = self.validation_loop(self.dataset.dataloader(validation = True))
 
-        self.logger.log(f"Round {self.epoch_fl} Model evaluation finished", object="experiment_evaluate", object_id=self.id )
+        self.logger.log(prefix + " evaluation finished", object="experiment_evaluate", object_id=self.id )
         
         self.model.save()
         
@@ -56,10 +60,12 @@ class FederatedExperiment(Experiment):
     def training_loop(self, data_loader):
         self.model.train()
 
+        prefix = f"Round {self.epoch_fl} " + self.log_msg_infix
+
         errors = None
         mapes = None
         for epoch in range(self.epochs):
-            self.logger.log(f"Round {self.epoch_fl} Training Epoch {epoch}", object="experiment_fit", object_id=self.id )
+            self.logger.log(prefix + " Training Epoch {epoch}", object="experiment_fit", object_id=self.id )
             for X,y in data_loader:
 
                 self.optim.zero_grad()

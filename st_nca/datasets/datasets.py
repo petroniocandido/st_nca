@@ -168,7 +168,7 @@ class AllSensorDataset(Dataset):
       return (self.test_split - 1) * self.pems.num_sensors 
 
   def __iter__(self):
-    for ix in range(self.samples):
+    for ix in range(len(self)):
       yield self[ix]
 
   def to(self, *args, **kwargs):
