@@ -3,6 +3,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from collections import OrderedDict
 
 import torch
 from torch import nn, optim
@@ -10,21 +11,23 @@ from torch.utils.data import Dataset, DataLoader
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
 from st_nca.common import checkpoint, SMAPE
-from st_nca.datasets.PEMS import PEMS03
+from st_nca.datasets.PEMS import PEMSBase
 from st_nca.gca import get_timestamp
 from st_nca.embeddings.temporal import from_datetime_to_pd, from_pd_to_datetime, \
   datetime_to_str
 
 
 class FineTunningDataset(Dataset):
-  def __init__(self, pems, nodes = None, train = 0.7, **kwargs):
+  def __init__(self, pems, nodes = None, train = 0.8, **kwargs):
     super().__init__()
 
-    self.pems : PEMS03 = pems
-    self.nodes = sorted(nodes)
-    if self.nodes is None:
+    self.pems : PEMSBase = pems
+    
+    if nodes is None:
       self.nodes = sorted([node for node in self.pems.G.nodes()])
-    self.num_nodes = len(nodes)
+    else:
+      self.nodes = sorted(nodes)
+    self.num_nodes = len(self.nodes)
     self.increment_type = kwargs.get('increment_type','minute')
     self.increment = kwargs.get('increment',1)
     self.steps_ahead = kwargs.get('steps_ahead',10)
@@ -32,6 +35,8 @@ class FineTunningDataset(Dataset):
     self.num_samples = self.pems.num_samples
 
     self.index = [k for k in range(self.num_samples - self.steps_ahead)]
+
+    self.step = kwargs.get('step', 1000)
     
     np.random.shuffle(self.index)
 
@@ -53,7 +58,8 @@ class FineTunningDataset(Dataset):
       raise Exception("Unknown date type: {}".format(type(date)))
 
     try:
-      X = {'timestamp': datetime_to_str(dt1)}
+      X = OrderedDict()
+      X['timestamp'] = datetime_to_str(dt1)
       df1 = self.pems.data[(self.pems.data['timestamp'] == dt1)]
       for ix, node in enumerate(self.nodes):
         X[str(node)] = df1[str(node)].values[0]
@@ -62,7 +68,7 @@ class FineTunningDataset(Dataset):
 
       for ct in range(0,self.steps_ahead):
         
-        dt2 = from_datetime_to_pd(get_timestamp(from_pd_to_datetime(dt1), self.increment_type, self.increment))
+        dt2 = get_timestamp(dt1, self.increment_type, self.increment)
         df2 = self.pems.data[(self.pems.data['timestamp'] == dt2)]
 
         for ix, node in enumerate(self.nodes):
@@ -91,10 +97,11 @@ class FineTunningDataset(Dataset):
     return tmp
 
   def __len__(self):
-    return self.num_samples - self.steps_ahead
+    return int((self.end - self.start)/self.step)
 
   def __iter__(self):
-    for ix in self.index[self.start, self.end]:
+    for ct in range(self.start, self.end, self.step):
+      ix = self.index[ct]
       yield self[self.pems.data['timestamp'][ix]]
 
   def to(self, *args, **kwargs):
@@ -130,8 +137,6 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
 
     y_pred = model.batch_run(X, iterations = iterations,
                       increment_type = increment_type, increment = increment)
-    
-    print(y.size(), y_pred.size())
 
     error = loss(y, y_pred.squeeze())
     map = mape(y, y_pred.squeeze())
@@ -206,8 +211,7 @@ def finetune_loop(DEVICE, dataset, model, display = None, **kwargs):
 
   for epoch in range(epochs):
 
-    if epoch % 5 == 0:
-      checkpoint(model, checkpoint_file)
+    checkpoint(model, checkpoint_file)
 
     errors_train, map_train, errors_val, map_val = finetune_step(DEVICE, train_ldr, test_ldr, 
                                                                  model, loss, mape, optimizer, **kwargs)

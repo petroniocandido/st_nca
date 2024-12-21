@@ -13,7 +13,7 @@ from st_nca.cellmodel import CellModel as BaseCellModel
 from st_nca.common import get_device
 
 
-import CellModel as FlautimCellModel, CentralizedSSLPreTrain, PEMSDataset
+import CellModel as FlautimCellModel, CentralizedSSLPreTrain, PEMSDataset as PEMSDataset
 
 
 DEVICE = get_device()
@@ -26,6 +26,8 @@ TRANSFACT = nn.GELU()
 MLP = 2
 MLPD = 512
 MLPACT = nn.GELU()
+BATCH = 512
+EPOCHS = 200
 
 def create_model(pems):
     return BaseCellModel(num_tokens = pems.max_length, dim_token = pems.token_dim,
@@ -34,52 +36,6 @@ def create_model(pems):
                mlp = MLP, mlp_dim = MLPD, mlp_activation = MLPACT,
                dtype = DTYPE, device=DEVICE)
 
-def generate_client_fn(pems, context, measures, logger):
-    
-    def create_client_fn(ctx):
-
-        if str(ctx) != 'FL-Global':
-            sensor = pems.get_sensor(int(ctx.node_config["partition-id"]))
-            id = int(ctx.node_config["partition-id"])
-        else:
-            sensor = 'FL-Global'
-            id = 0
-        
-        model = FlautimCellModel.FlautimCellModel(context, suffix = str(sensor), 
-                                        model = create_model(pems))
-        
-        dataset = PEMSDataset.PEMSDataset(pems = pems, client = id, batch_size=2048, 
-                                        type = 'centralized',
-                                        xtype = torch.float32, ytype = torch.float32)
-        
-        return CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
-                                               device = DEVICE, epochs = 50)
-        
-    return create_client_fn
-    
-
-def evaluate_fn(pems, context, measures, logger):
-    def fn(server_round, parameters, config):
-        """This function is executed by the strategy it will instantiate
-        a model and replace its parameters with those from the global model.
-        The, the model will be evaluate on the test set (recall this is the
-        whole MNIST test set)."""
-
-        model = FlautimCellModel.FlautimCellModel(context, model = create_model(pems))
-        model.set_parameters(parameters)
-        
-        dataset = PEMSDataset.PEMSDataset(batch_size=2048, client = 0, pems = pems, 
-                                        type = 'centralized',
-                                        xtype = torch.float32, ytype = torch.float32)
-        
-        experiment = CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
-                                               device = DEVICE)
-        
-        mse, smape = experiment.validation_loop(dataset.dataloader(validation=True)) 
-
-        return mse, {"smape": smape}
-
-    return fn
 
 if __name__ == '__main__':
 
@@ -88,7 +44,14 @@ if __name__ == '__main__':
 
     pems = PEMS03()
     
-    client_fn_callback = generate_client_fn(pems, context, measures, logger)
-    evaluate_fn_callback = evaluate_fn(pems, context, measures, logger)
+    model = FlautimCellModel.FlautimCellModel(context, suffix = 'FL-Global', 
+                                        model = create_model(pems))
+        
+    dataset = PEMSDataset.PEMSDataset(pems = pems, client = 0, batch_size=BATCH, 
+                                    type = 'centralized',
+                                    xtype = torch.float32, ytype = torch.float32)
+        
+    experiment = CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
+                                            device = DEVICE, epochs = EPOCHS)
 
-    run_centralized(client_fn_callback, evaluate_fn_callback)
+    run_centralized(experiment)

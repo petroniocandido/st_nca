@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -10,22 +11,13 @@ from torch.utils.data import Dataset, DataLoader
 
 from tensordict import TensorDict
 
-from st_nca.embeddings.temporal import str_to_datetime
+from st_nca.embeddings.temporal import str_to_datetime, from_datetime_to_pd
 from st_nca.cellmodel import CellModel
 from st_nca.tokenizer import NeighborhoodTokenizer
 
 
 def get_timestamp(start_ts, increment_type, increment):
-  days = increment if increment_type == 'days' else 0
-  seconds = increment if increment_type == 'seconds' else 0
-  microseconds = increment if increment_type == 'microseconds' else 0
-  milliseconds = increment if increment_type == 'milliseconds' else 0
-  minutes = increment if increment_type == 'minutes' else 0
-  hours = increment if increment_type == 'hours' else 0
-  weeks = increment if increment_type == 'weeks' else 0
-  delta = timedelta(days=days, seconds=seconds, microseconds=microseconds, 
-                    milliseconds=milliseconds, minutes=minutes, hours=hours, weeks=weeks) 
-  return start_ts + delta
+  return start_ts + pd.Timedelta(increment, unit=increment_type)
 
 
 def timestamp_generator(start_ts, iterations, increment_type='minutes', step=1):
@@ -82,6 +74,9 @@ class GraphCellularAutomata(nn.Module):
     return state_history
   
   def run(self, initial_date, initial_state, iterations, increment_type='minute', increment=1, **kwargs) -> torch.Tensor:
+    if isinstance(initial_date, datetime):
+      initial_date = from_datetime_to_pd(initial_date)
+    
     return_type = kwargs.get('return_type','tensordict')
     current_state = TensorDict(initial_state)
     if return_type == 'tensordict':
