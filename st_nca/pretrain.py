@@ -7,7 +7,8 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
-from st_nca.common import MAPE, SMAPE, checkpoint
+from st_nca.common import checkpoint
+from st_nca.evaluate import SMAPE, MAPE
 
 
 def train_step(DEVICE, train, test, model, loss, mape, optim):

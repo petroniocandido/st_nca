@@ -1,6 +1,7 @@
 import copy
 import time
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 from collections import OrderedDict
@@ -10,7 +11,8 @@ from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
 
-from st_nca.common import checkpoint, SMAPE
+from st_nca.common import checkpoint
+from st_nca.evaluate import SMAPE
 from st_nca.datasets.PEMS import PEMSBase
 from st_nca.gca import get_timestamp
 from st_nca.embeddings.temporal import from_datetime_to_pd, from_pd_to_datetime, \
@@ -46,7 +48,10 @@ class FineTunningDataset(Dataset):
     self.end = self.num_samples
 
   def __getitem__(self, date):
-    if isinstance(date, datetime):
+    #print(type(date))
+    if isinstance(date, pd.Timestamp):
+      dt1 = date
+    elif isinstance(date, datetime):
       dt1 = from_datetime_to_pd(date)
     elif isinstance(date, np.datetime64):
       dt1 = date
@@ -62,19 +67,16 @@ class FineTunningDataset(Dataset):
       for ix, node in enumerate(self.nodes):
         X[str(node)] = df1[str(node)].values[0]
 
-      y = torch.zeros(self.num_nodes * self.steps_ahead, dtype=self.pems.dtype, device=self.pems.device)
+      y = torch.zeros(self.num_nodes, dtype=self.pems.dtype, device=self.pems.device)
+    
+      dt2 = get_timestamp(dt1, self.increment_type, self.increment * self.steps_ahead)
+      df2 = self.pems.data[(self.pems.data['timestamp'] == dt2)]
 
-      for ct in range(0,self.steps_ahead):
-        
-        dt2 = get_timestamp(dt1, self.increment_type, self.increment)
-        df2 = self.pems.data[(self.pems.data['timestamp'] == dt2)]
+      for ix, node in enumerate(self.nodes):
+        y[ix] = torch.tensor(df2[str(node)].values, dtype=self.pems.dtype, device=self.pems.device)
 
-        for ix, node in enumerate(self.nodes):
-          y[ct * self.num_nodes + ix] = torch.tensor(df2[str(node)].values, dtype=self.pems.dtype, device=self.pems.device)
-
-        dt1 = from_pd_to_datetime(dt2)
     except:
-      print("ERROR!: Initial date: {}   Step: {}    Error date: {}".format(dt1, ct, dt2))
+      print("ERROR!: Initial date: {}   Error date: {}".format(dt1, dt2))
      
     return X,y
   

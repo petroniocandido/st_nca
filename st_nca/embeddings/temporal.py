@@ -23,7 +23,8 @@ def from_pd_to_datetime(dt):
   return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
   
 def from_datetime_to_pd(date : datetime):
-  return to_pandas_datetime(np.datetime64(date.astimezone(timezone.utc)))
+  #return to_pandas_datetime(np.datetime64(date.astimezone(timezone.utc)))
+  return to_pandas_datetime(np.datetime64(date.astimezone(None)))
 
 
 class TemporalEmbedding(nn.Module):

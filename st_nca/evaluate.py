@@ -3,7 +3,22 @@ import pandas as pd
 import torch
 
 from st_nca.embeddings.temporal import str_to_datetime, from_datetime_to_pd
-from st_nca.common import SMAPE, MAE, RMSE, nRMSE
+from st_nca.gca import get_timestamp
+
+def MAPE(y, y_pred):
+  return torch.mean((y - y_pred).abs() / (y.abs() + 1e-8))
+
+def SMAPE(y, y_pred):
+  return torch.mean(2*(y - y_pred).abs() / (y.abs() + y_pred.abs() + 1e-8))
+
+def MAE(y, y_pred):
+  return torch.mean((y - y_pred).abs())
+
+def RMSE(y, y_pred):
+  return torch.sqrt(torch.mean((y - y_pred) ** 2))
+
+def nRMSE(y, y_pred):
+  return RMSE(y, y_pred)/torch.mean(y)
 
 
 def diff_states(state1, state2):
@@ -28,20 +43,25 @@ def diff_states(state1, state2):
 
 def extract_tensor(model, state):
   n = len(model.nodes)
-  vals = [state[k] for k in model.nodes]
+  vals = [state[str(k)] for k in model.nodes]
   return torch.tensor(vals, device=model.device, dtype=model.dtype)
 
 
 def evaluate(dataset, gca, steps_ahead, increment_type='minutes', increment=5):
   columns = ['timestamp','mape','mae','rmse','nrmse']
   rows = []
-  for X,y in dataset:
+  for ix in range(len(dataset) - increment * steps_ahead):
+    X,y = dataset[ix]
     p = gca.run(str_to_datetime(X['timestamp']), X, iterations=steps_ahead, 
                 increment_type=increment_type, increment=increment, 
-                return_type='tensordict')
-    row = [y['timestamp']]
-    y_ = extract_tensor(gca, y)
-    p_ = extract_tensor(gca, p[-1])
-    row.extend([SMAPE(y_, p_), MAE(y_, p_), RMSE(y_, p_), nRMSE(y_, p_)])
+                return_type='tensor').detach()
+    row = [get_timestamp(str_to_datetime(X['timestamp']),increment_type, increment * steps_ahead)]
+    
+    row.extend([
+      SMAPE(y, p).cpu().item(), 
+      MAE(y, p).cpu().item(), 
+      RMSE(y, p).cpu().item(), 
+      nRMSE(y, p).cpu().item()]
+      )
     rows.append(row)
   return pd.DataFrame(rows, columns=columns)
