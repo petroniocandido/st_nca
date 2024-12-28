@@ -22,6 +22,8 @@ class PEMSBase:
       self.dtype = kwargs.get('dtype',torch.float64)
       self.device = kwargs.get('device','cpu')
 
+      self.steps_ahead = kwargs.get('steps_ahead',1)
+
       edges = pd.read_csv(kwargs.get('edges_file','edges.csv'), engine='pyarrow')
       self.data = pd.read_csv(kwargs.get('data_file','data.csv'), engine='pyarrow')
       self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
@@ -68,7 +70,7 @@ class PEMSBase:
 
       #self.sensors = sorted([k for k in self.G.nodes()])
 
-      self.num_samples = len(self.data)
+      self.num_samples = len(self.data) - self.steps_ahead
       self.token_dim = 7
 
       self.value_index = 4
@@ -105,9 +107,9 @@ class PEMSBase:
     def get_sample(self, sensor, index):
       X = self.tokenizer.tokenize_sample(self.data, sensor, index)
       if not self.td:    
-        y = torch.tensor(self.data[str(sensor)].values[index+1], dtype=self.dtype, device=self.device)
+        y = torch.tensor(self.data[str(sensor)].values[index+self.steps_ahead], dtype=self.dtype, device=self.device)
       else:
-        y = self.data[str(sensor),index+1]
+        y = self.data[str(sensor),index+self.steps_ahead]
       return X,y
 
     # Will returna a SensorDataset filled with the sensor & neighbors preprocessed data (X)

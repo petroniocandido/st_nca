@@ -51,6 +51,7 @@ def evaluate(dataset, gca, steps_ahead, increment_type='minutes', increment=5):
   columns = ['timestamp','mape','mae','rmse','nrmse']
   rows = []
   for ix in range(len(dataset) - increment * steps_ahead):
+    print(ix)
     X,y = dataset[ix]
     p = gca.run(str_to_datetime(X['timestamp']), X, iterations=steps_ahead, 
                 increment_type=increment_type, increment=increment, 
@@ -63,5 +64,6 @@ def evaluate(dataset, gca, steps_ahead, increment_type='minutes', increment=5):
       RMSE(y, p).cpu().item(), 
       nRMSE(y, p).cpu().item()]
       )
+    print(row)
     rows.append(row)
   return pd.DataFrame(rows, columns=columns)

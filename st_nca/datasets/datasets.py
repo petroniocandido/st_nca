@@ -110,7 +110,7 @@ class SensorDataset(Dataset):
   
 
 class AllSensorDataset(Dataset):
-  def __init__(self, pems, train = 0.7, **kwargs):
+  def __init__(self, pems, train = 0.8, **kwargs):
     super().__init__()
 
     self.pems = pems
@@ -142,14 +142,14 @@ class AllSensorDataset(Dataset):
 
   def __getitem__(self, index):
     if not self.is_validation:
-      train_sensor_ix = index // (self.train_split - 1)
-      train_data_ix = index % (self.train_split - 1)
+      train_sensor_ix = index // (self.train_split - self.pems.steps_ahead)
+      train_data_ix = index % (self.train_split - self.pems.steps_ahead)
       sensor = self.pems.get_sensor(train_sensor_ix)
       X,y = self.pems.get_sample(sensor, train_data_ix)
       #print(train_sensor_ix, sensor, train_data_ix)
     else:
-      train_sensor_ix = index // (self.test_split - 1)
-      train_data_ix = (index % (self.test_split - 1)) + self.train_split
+      train_sensor_ix = index // (self.test_split - self.pems.steps_ahead)
+      train_data_ix = (index % (self.test_split - self.pems.steps_ahead)) + self.train_split
       sensor = self.pems.get_sensor(train_sensor_ix)
       #print(train_sensor_ix, sensor, train_data_ix)
       X,y = self.pems.get_sample(sensor, train_data_ix)
@@ -163,9 +163,9 @@ class AllSensorDataset(Dataset):
     
   def __len__(self):
     if not self.is_validation:
-      return (self.train_split - 1) * self.pems.num_sensors 
+      return (self.train_split - self.pems.steps_ahead) * self.pems.num_sensors 
     else:
-      return (self.test_split - 1) * self.pems.num_sensors 
+      return (self.test_split - self.pems.steps_ahead) * self.pems.num_sensors 
 
   def __iter__(self):
     for ix in range(len(self)):

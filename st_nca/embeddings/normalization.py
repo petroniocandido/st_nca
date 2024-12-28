@@ -12,7 +12,8 @@ class ZTransform(nn.Module):
     super().__init__()
     self.device = kwargs.get('device','cpu')
     self.dtype = kwargs.get('dtype',torch.float32)
-    data = torch.tensor(data, dtype=self.dtype, device=self.device)
+    if not isinstance(data, torch.Tensor):
+      data = torch.tensor(data, dtype=self.dtype, device=self.device)
     self.mu = torch.mean(data)
     self.sigma = torch.std(data)
     

@@ -138,8 +138,8 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
     y_pred = model.batch_run(X, iterations = iterations,
                       increment_type = increment_type, increment = increment)
 
-    error = loss(y, y_pred.squeeze())
-    map = mape(y, y_pred.squeeze())
+    error = loss(y.squeeze(), y_pred.squeeze())
+    map = mape(y.squeeze(), y_pred.squeeze())
 
     error.backward()
     optim.step()
@@ -169,8 +169,8 @@ def finetune_step(DEVICE, train, test, model, loss, mape, optim, **kwargs):
       y_pred = model.batch_run(X, iterations = iterations,
                       increment_type = increment_type, increment = increment)
 
-      error_val = loss(y, y_pred.squeeze())
-      map_val = mape(y, y_pred.squeeze())
+      error_val = loss(y.squeeze(), y_pred.squeeze())
+      map_val = mape(y.squeeze(), y_pred.squeeze())
 
       errors_val.append(error_val.cpu().item())
       mapes_val.append(map_val.cpu().item())
