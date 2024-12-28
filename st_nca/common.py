@@ -14,6 +14,9 @@ def MAE(y, y_pred):
 def RMSE(y, y_pred):
   return torch.sqrt(torch.mean((y - y_pred) ** 2))
 
+def nRMSE(y, y_pred):
+  return RMSE(y, y_pred)/torch.mean(y)
+
 def get_device():
   return 'cuda' if torch.cuda.is_available() else 'cpu'
 

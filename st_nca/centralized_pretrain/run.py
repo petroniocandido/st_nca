@@ -19,15 +19,15 @@ import CellModel as FlautimCellModel, CentralizedSSLPreTrain, PEMSDataset as PEM
 DEVICE = get_device()
 print(DEVICE)
 DTYPE = torch.float32
-NTRANSF = 2
-NHEADS = 8
-NTRANSFF = 512
+NTRANSF = 4
+NHEADS = 16
+NTRANSFF = 2048
 TRANSFACT = nn.GELU()
-MLP = 2
-MLPD = 512
+MLP = 4
+MLPD = 2048
 MLPACT = nn.GELU()
 BATCH = 512
-EPOCHS = 200
+EPOCHS = 30
 
 def create_model(pems):
     return BaseCellModel(num_tokens = pems.max_length, dim_token = pems.token_dim,

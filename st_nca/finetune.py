@@ -37,8 +37,6 @@ class FineTunningDataset(Dataset):
     self.index = [k for k in range(self.num_samples - self.steps_ahead)]
 
     self.step = kwargs.get('step', 1000)
-    
-    np.random.shuffle(self.index)
 
     self.train_split = int(train * self.num_samples) 
 
@@ -209,17 +207,24 @@ def finetune_loop(DEVICE, dataset, model, display = None, **kwargs):
 
   start_time = time.time()
 
-  for epoch in range(epochs):
+  best = np.inf
 
+  for epoch in range(epochs):
     checkpoint(model, checkpoint_file)
 
     errors_train, map_train, errors_val, map_val = finetune_step(DEVICE, train_ldr, test_ldr, 
                                                                  model, loss, mape, optimizer, **kwargs)
 
-    error_train.append(np.mean(errors_train))
-    mape_train.append(np.mean(map_train))
-    error_val.append(np.mean(errors_val))
-    mape_val.append(np.mean(map_val))
+    error_train.append(np.median(errors_train))
+    mape_train.append(np.median(map_train))
+    error_val.append(np.median(errors_val))
+    mv = np.median(map_val)
+    mape_val.append(mv)
+
+    if mv < best:
+      checkpoint(model, checkpoint_file+'BEST')
+      best = mv
+
 
     display.clear_output(wait=True)
     ax[0].clear()
