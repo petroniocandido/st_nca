@@ -17,10 +17,12 @@ class CentralizedExperiment(Experiment):
         self.device = kwargs.get('device','cpu')
 
         self.loss = nn.MSELoss() 
-        self.mape = SMAPE
-        self.optim = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0005)
-        self.epochs = kwargs.get('epochs', 50)
         self.model = model
+        self.mape = SMAPE
+        self.lr = kwargs.get('lr', 0.001)
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=0.0005)
+        self.epochs = kwargs.get('epochs', 50)
+        
 
     def fit(self, **kwargs):
 

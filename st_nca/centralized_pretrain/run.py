@@ -27,14 +27,14 @@ MLP = 3
 MLPD = 1024
 MLPACT = nn.GELU()
 BATCH = 512
-EPOCHS = 30
+EPOCHS = 100
 
-def create_model(pems):
+def create_model(pems,**kwargs):
     return BaseCellModel(num_tokens = pems.max_length, dim_token = pems.token_dim,
                num_transformers = NTRANSF, num_heads = NHEADS, feed_forward = NTRANSFF, 
                transformer_activation = TRANSFACT,
                mlp = MLP, mlp_dim = MLPD, mlp_activation = MLPACT,
-               dtype = DTYPE, device=DEVICE)
+               dtype = DTYPE, device=DEVICE,**kwargs)
 
 
 if __name__ == '__main__':
@@ -45,13 +45,15 @@ if __name__ == '__main__':
     pems = PEMS03(steps_ahead=12)
     
     model = FlautimCellModel.FlautimCellModel(context, suffix = 'FL-Global', 
-                                        model = create_model(pems))
+                                        model = create_model(pems,
+                                                             pre_norm=True, normalization=nn.RMSNorm))
         
     dataset = PEMSDataset.PEMSDataset(pems = pems, client = 0, batch_size=BATCH, 
                                     type = 'centralized',
                                     xtype = torch.float32, ytype = torch.float32)
         
     experiment = CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
-                                            device = DEVICE, epochs = EPOCHS)
+                                            device = DEVICE, epochs = EPOCHS,
+                                            lr = 0.0001)
 
     run_centralized(experiment)
