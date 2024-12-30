@@ -161,6 +161,4 @@ class Transformer(nn.Module):
     self.attention = self.attention.train(*args, **kwargs)
     self.linear1 = self.linear1.train(*args, **kwargs)
     self.linear2 = self.linear2.train(*args, **kwargs)
-    self.ln1 = self.ln1.to(*args, **kwargs)
-    self.ln2 = self.ln2.to(*args, **kwargs)
     return self
