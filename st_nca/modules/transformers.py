@@ -111,9 +111,11 @@ class Transformer(nn.Module):
     self.embed_dim = embed_dim
     self.device = device
     self.dtype = dtype
+    self.normalization = kwargs.get('normalization', nn.LayerNorm)
+    self.pre_norm = kwargs.get('pre_norm', False)
     self.attention = MultiHeadAttention(num_heads, num_tokens, embed_dim,
                             dtype=self.dtype, device=self.device)
-    self.ln = nn.LayerNorm(embed_dim, dtype=self.dtype, device=self.device)
+    self.ln = self.normalization(embed_dim, dtype=self.dtype, device=self.device)
     self.flat = nn.Flatten(1)
     self.linear1 = nn.Linear(num_tokens * embed_dim, feed_forward,
                             dtype=self.dtype, device=self.device)
@@ -124,13 +126,17 @@ class Transformer(nn.Module):
     self.unflat = nn.Unflatten(1, [num_tokens, embed_dim])
 
   def forward(self, x):
-    z = self.attention(x)
-    z = self.ln(x + z)
-    z = self.flat(z)
+    if self.pre_norm:
+      z = self.ln(x)
+    else:
+      z = x
+    z = self.attention(z)
+    z1 = self.ln(x + z)
+    z = self.flat(z1)
     z = self.activation(self.linear1(self.drop(z)))
     z = self.activation(self.linear2(self.drop(z)))
     z = self.unflat(z)
-    z = self.ln(x + z)
+    z = self.ln(x + z1)
     return z
 
   def to(self, *args, **kwargs):

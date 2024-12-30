@@ -7,7 +7,7 @@ from torch import nn
 import numpy as np
 
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
-from st_nca.common import SMAPE
+from st_nca.evaluate import SMAPE
 
 
 class CentralizedExperiment(Experiment):

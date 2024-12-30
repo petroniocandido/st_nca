@@ -6,7 +6,7 @@ import numpy as np
 from torch import nn
 
 #from torchmetrics.regression import SymmetricMeanAbsolutePercentageError
-from st_nca.common import SMAPE
+from st_nca.evaluate import SMAPE
 
 
 class FederatedExperiment(Experiment):

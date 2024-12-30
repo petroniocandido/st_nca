@@ -22,7 +22,7 @@ class CellModel(nn.Module):
     
 
     self.transformers = nn.ModuleList([Transformer(num_heads, self.num_tokens, dim_token, feed_forward, transformer_activation,
-                         dtype=self.dtype, device=self.device)
+                         dtype=self.dtype, device=self.device, **kwargs)
                          for k in range(num_transformers)])
 
     self.flat = nn.Flatten(1)
