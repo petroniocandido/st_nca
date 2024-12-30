@@ -19,12 +19,12 @@ import CellModel as FlautimCellModel, CentralizedSSLPreTrain, PEMSDataset as PEM
 DEVICE = get_device()
 print(DEVICE)
 DTYPE = torch.float32
-NTRANSF = 4
+NTRANSF = 3
 NHEADS = 16
-NTRANSFF = 2048
+NTRANSFF = 1024
 TRANSFACT = nn.GELU()
-MLP = 4
-MLPD = 2048
+MLP = 3
+MLPD = 1024
 MLPACT = nn.GELU()
 BATCH = 512
 EPOCHS = 30
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     parser, context, backend, logger, measures = get_argparser()
 
-    pems = PEMS03()
+    pems = PEMS03(steps_ahead=12)
     
     model = FlautimCellModel.FlautimCellModel(context, suffix = 'FL-Global', 
                                         model = create_model(pems))
