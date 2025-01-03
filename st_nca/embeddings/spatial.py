@@ -15,15 +15,17 @@ class SpatialEmbedding(nn.Module):
     self.device = kwargs.get('device','cpu')
     self.dtype = kwargs.get('dtype',torch.float32)
     tmp_dict = {}
-    lat_dict = nx.get_node_attributes(graph,'lat')
-    lon_dict = nx.get_node_attributes(graph,'lon')
+    self.latlon = kwargs.get("latlon",True)
+    if self.latlon:
+      lat_dict = nx.get_node_attributes(graph,'lat')
+      lon_dict = nx.get_node_attributes(graph,'lon')
 
-    lat = [v for v in lat_dict.values()]
-    lon = [v for v in lon_dict.values()]
-    lat_min, lat_max = np.min(lat), np.max(lat)
-    lat_rng = lat_max-lat_min
-    lon_min, lon_max = np.min(lon), np.max(lon)
-    lon_rng = lon_max-lon_min
+      lat = [v for v in lat_dict.values()]
+      lon = [v for v in lon_dict.values()]
+      lat_min, lat_max = np.min(lat), np.max(lat)
+      lat_rng = lat_max-lat_min
+      lon_min, lon_max = np.min(lon), np.max(lon)
+      lon_rng = lon_max-lon_min
 
     M = nx.adjacency_matrix(graph).todense()
     laplacian = SpectralEmbedding(n_components=laplacian_components) #, affinity='precomputed')
@@ -32,9 +34,12 @@ class SpatialEmbedding(nn.Module):
     self.length = 0
     for ix, node in enumerate(graph.nodes()):
         emb = np.zeros(4)
-        emb[0] = (lat_dict[node] - lat_min) / lat_rng * 2 - 1
-        emb[1] = (lon_dict[node] - lon_min) / lon_rng * 2 - 1
-        emb[2:] = laplacian_map[ix,:]
+        if self.latlon:
+          emb[0] = (lat_dict[node] - lat_min) / lat_rng * 2 - 1
+          emb[1] = (lon_dict[node] - lon_min) / lon_rng * 2 - 1
+          emb[2:] = laplacian_map[ix,:]
+        else:
+          emb = laplacian_map[ix,:]
         tmp_dict[str(node)] = torch.tensor(emb, dtype = self.dtype, device = self.device)
         self.length += 1
 

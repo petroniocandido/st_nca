@@ -1,6 +1,35 @@
 
 import torch
+from torch import nn
 from tensordict import TensorDict
+
+activations = {
+  'ReLU': nn.ReLU(), 
+  'GELU': nn.GELU(), 
+  'GLU': nn.GLU(),
+  'SELU': nn.SELU()
+}
+
+normalizations = {
+  'LayerNorm': nn.LayerNorm, 
+  'RMSNorm': nn.RMSNorm,
+  'BatchNorm': nn.BatchNorm1d,
+  'GroupNorm': nn.GroupNorm
+}
+
+dtypes = {
+  'torch.int8': torch.int8,
+  'torch.int16': torch.int16,
+  'torch.int32': torch.int32,
+  'torch.int64': torch.int64,
+  'torch.int': torch.int,
+  'torch.long': torch.long,
+  'torch.float': torch.float,
+  'torch.float16': torch.float16,
+  'torch.float32': torch.float32,
+  'torch.float64': torch.float64
+}
+
 
 def get_device():
   return 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -8,11 +37,8 @@ def get_device():
 def checkpoint(model, file):
   torch.save(model.state_dict(), file)
 
-def checkpoint_all(model, optimizer, file):
-  torch.save({
-    'optim': optimizer.state_dict(),
-    'model': model.state_dict(),
-}, file)
+def checkpoint_all(file, **kwargs):
+  torch.save({k: v for k,v in kwargs.items() }, file)
 
 def resume(model, file):
   model.load_state_dict(torch.load(file, weights_only=True, map_location=torch.device(get_device())))

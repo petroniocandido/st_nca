@@ -15,6 +15,12 @@ from st_nca.common import TensorDictDataframe
 from st_nca.datasets.datasets import SensorDataset, AllSensorDataset
 
 
+def get_config(pems):
+  return {
+    'steps_ahead': pems.steps_ahead
+  }
+
+
 class PEMSBase:
 
     def __init__(self,**kwargs):
@@ -183,21 +189,21 @@ class PEMSBase:
 class PEMS03(PEMSBase):
     def __init__(self,**kwargs):
       super(PEMS03, self).__init__(latlon = True, 
-                                   edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/edges.csv",
-                                   nodes_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/nodes.csv",
-                                   data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/data.csv",
+                                   edges_file = kwargs.pop('edges_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/edges.csv"),
+                                   nodes_file = kwargs.pop('nodes_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/nodes.csv"),
+                                   data_file = kwargs.pop('data_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS03/data.csv"),
                                    **kwargs)
 
 class PEMS04(PEMSBase):
     def __init__(self,**kwargs):
       super(PEMS03, self).__init__(latlon = False, 
-                                   edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/edges.csv",
-                                   data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/data.csv",
+                                   edges_file = kwargs.pop('edges_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/edges.csv"),
+                                   data_file = kwargs.pop('data_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/data.csv"),
                                    **kwargs)
 
 class PEMS08(PEMSBase):
     def __init__(self,**kwargs):
       super(PEMS03, self).__init__(latlon = False, 
-                                   edges_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/edges.csv",
-                                   data_file = "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/data.csv",
+                                   edges_file = kwargs.pop('edges_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/edges.csv"),
+                                   data_file = kwargs.pop('data_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/data.csv"),
                                    **kwargs)

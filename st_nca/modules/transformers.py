@@ -1,8 +1,25 @@
 import torch
 from torch import nn
 
+from st_nca.common import normalizations
+
 #My own implementation, already tested
 #Original source:  https://github.com/petroniocandido/clshq_tk/blob/main/clshq_tk/modules/attention.py
+
+
+def get_config(model):
+  return { 'num_heads': model.num_heads,
+          #'num_tokens': model.num_tokens,
+          #'embed_dim': model.embed_dim,
+          #'device': model.device,
+          #'dtype': model.dtype,
+          #'normalization': model.normalization.__name__,
+          'normalization': model.normalization,
+          'pre_norm': model.pre_norm,
+          'transformer_feed_forward': model.linear1.weight.size(0),
+          #'transformer_activation': model.activation.__class__.__name__
+          'transformer_activation': model.activation
+            }
 
 
 def f_token_level(x,y):
@@ -112,6 +129,8 @@ class Transformer(nn.Module):
     self.device = device
     self.dtype = dtype
     self.normalization = kwargs.get('normalization', nn.LayerNorm)
+    if isinstance(self.normalization, str):
+      self.normalization = normalizations[self.normalization]
     self.pre_norm = kwargs.get('pre_norm', False)
     self.attention = MultiHeadAttention(num_heads, num_tokens, embed_dim,
                             dtype=self.dtype, device=self.device)

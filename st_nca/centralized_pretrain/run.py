@@ -27,7 +27,7 @@ MLP = 3
 MLPD = 1024
 MLPACT = nn.GELU()
 BATCH = 512
-EPOCHS = 100
+EPOCHS = 50
 
 def create_model(pems,**kwargs):
     return BaseCellModel(num_tokens = pems.max_length, dim_token = pems.token_dim,
@@ -54,6 +54,6 @@ if __name__ == '__main__':
         
     experiment = CentralizedSSLPreTrain.CentralizedExperiment(model, dataset, measures, logger, context,
                                             device = DEVICE, epochs = EPOCHS,
-                                            lr = 0.0001)
+                                            lr = 0.001)
 
     run_centralized(experiment)
