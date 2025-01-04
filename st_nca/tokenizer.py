@@ -76,11 +76,11 @@ class NeighborhoodTokenizer(nn.Module):
     tmp = self.normalized_data(data, sensor)
     n = len(tmp)
     tim_emb = self.temporal_embedding.all().reshape(n,2)
-
+    
     tokens = self.spatial_embedding[sensor].repeat(n,1)
     tokens = torch.hstack([tokens, tmp.reshape(n,1) ])
     tokens = torch.hstack([tokens, tim_emb])
-
+    
     m = 1
 
     for neighbor in self.graph.neighbors(sensor):

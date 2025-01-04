@@ -14,8 +14,8 @@ class ZTransform(nn.Module):
     self.dtype = kwargs.get('dtype',torch.float32)
     if not isinstance(data, torch.Tensor):
       data = torch.tensor(data, dtype=self.dtype, device=self.device)
-    self.mu = torch.mean(data)
-    self.sigma = torch.std(data)
+    self.mu = torch.nanmean(data)
+    self.sigma = torch.std(torch.nan_to_num(data,0,0,0))
     
   def forward(self, x):
      #return z(x, self.mu, self.sigma)

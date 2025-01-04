@@ -33,7 +33,7 @@ def sync_weights(model, rank, world_size):
             dist.recv(param.data, src=0)
 
 
-def bcast_global_state(rank, world_size, current_state = None):
+def broadcast_global_state(rank, world_size, current_state = None):
     dist.broadcast_object_list(current_state, src=0)
     return current_state
 
@@ -45,6 +45,7 @@ def gather_partial_states(rank, world_size, current_state = None):
         output = None
     dist.all_gather_object(output, current_state)
     return output
+
 
 def inference(model, initial_state, rank, world_size):
     setup(rank, world_size)

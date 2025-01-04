@@ -117,7 +117,7 @@ class CellModel(nn.Module):
     for k in range(self.num_transformers):
       self.transformers[k] = self.transformers[k].to(*args, **kwargs)
     if not self.use_moe:
-      for k in range(self.mlps):
+      for k in range(self.feed_forward):
         self.linear[k] = self.linear[k].to(*args, **kwargs)
     else:
       self.moe = self.moe.to(*args, **kwargs)
@@ -129,7 +129,7 @@ class CellModel(nn.Module):
     for k in range(self.num_transformers):
       self.transformers[k] = self.transformers[k].train(*args, **kwargs)
     if not self.use_moe:
-      for k in range(self.mlps):
+      for k in range(self.feed_forward):
         self.linear[k] = self.linear[k].train(*args, **kwargs)
     else:
       self.moe = self.moe.train(*args, **kwargs)

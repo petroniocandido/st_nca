@@ -67,7 +67,7 @@ class GraphCellularAutomata(nn.Module):
     batch = len(initial_states['timestamp'])
     state_history = torch.zeros(batch, self.num_nodes, dtype=self.dtype, device=self.device)
     for ix in range(batch):
-      initial_state = TensorDict({key : initial_states[key][ix] for key in initial_states.keys() })
+      initial_state = TensorDict({key : initial_states[key][ix] for key in initial_states.keys()})
       initial_date = str_to_datetime(initial_state['timestamp'])
       state_history[ix, :] = self.run(initial_date, initial_state, iterations, 
                                       increment_type, increment, return_type='tensor', 

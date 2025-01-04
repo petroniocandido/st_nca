@@ -108,10 +108,14 @@ class MultiHeadAttention(nn.Module):
       self.dtype = args[0]
 
     for h in range(self.num_heads):
-      self.WQ[h].to(*args, **kwargs)
-      self.WK[h].to(*args, **kwargs)
-      self.WV[h].to(*args, **kwargs)
-    self.WO.to(*args, **kwargs)
+      self.WQ[h] = self.WQ[h].to(*args, **kwargs)
+      self.WK[h] = self.WK[h].to(*args, **kwargs)
+      self.WV[h] = self.WV[h].to(*args, **kwargs)
+    self.WO = self.WO.to(*args, **kwargs)
+    return self
+  
+  def train(self, *args, **kwargs):
+    self = super().train(*args, **kwargs)
     return self
     
  

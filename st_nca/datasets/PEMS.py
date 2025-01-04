@@ -49,6 +49,8 @@ class PEMSBase:
 
       if self.latlon:
 
+        laplacian_components = 2
+
         nodes = pd.read_csv(kwargs.get('nodes_file','nodes.csv'), engine='pyarrow')
 
         coordinates = {}
@@ -63,7 +65,12 @@ class PEMSBase:
 
         del(nodes)
 
-      self.node_embeddings = SpatialEmbedding(self.G, latlon=self.latlon, dtype=self.dtype, device=self.device)
+      else:
+
+        laplacian_components = 4
+
+      self.node_embeddings = SpatialEmbedding(self.G, latlon=self.latlon, laplacian_components = laplacian_components,
+                                              dtype=self.dtype, device=self.device)
 
       # The maximum sequence length is equal to the maximum graph degree, or the
       # maximum number of neighbors a node have in the graph
@@ -196,14 +203,14 @@ class PEMS03(PEMSBase):
 
 class PEMS04(PEMSBase):
     def __init__(self,**kwargs):
-      super(PEMS03, self).__init__(latlon = False, 
+      super(PEMS04, self).__init__(latlon = False, 
                                    edges_file = kwargs.pop('edges_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/edges.csv"),
                                    data_file = kwargs.pop('data_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS04/data.csv"),
                                    **kwargs)
 
 class PEMS08(PEMSBase):
     def __init__(self,**kwargs):
-      super(PEMS03, self).__init__(latlon = False, 
+      super(PEMS08, self).__init__(latlon = False, 
                                    edges_file = kwargs.pop('edges_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/edges.csv"),
                                    data_file = kwargs.pop('data_file', "https://raw.githubusercontent.com/petroniocandido/st_nca/refs/heads/main/st_nca/data/PEMS08/data.csv"),
                                    **kwargs)
