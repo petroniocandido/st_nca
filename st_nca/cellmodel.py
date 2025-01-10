@@ -4,9 +4,8 @@ from torch import nn
 from st_nca.modules.transformers import Transformer, get_config as transformer_get_config
 
 from st_nca.modules.moe import SparseMixtureOfExperts
-from st_nca.common import activations, dtypes
-
-
+from st_nca.common import activations, dtypes, get_device
+from st_nca.datasets.PEMS import get_config as pems_get_config
 
 
 def load_config(config):
@@ -42,6 +41,46 @@ def get_config(model, **extra):
   a |= b 
   a |= extra
   return a
+
+def save_as(from_file, to_file, pems, **kwargs):
+    DEVICE = pems.device
+    DTYPE = pems.dtype
+    if kwargs.get('config',None):
+      model = load_config(kwargs.get('config',None))
+    else:
+      NTRANSF = kwargs.get('NTRANSF',10)
+      NHEADS = kwargs.get('NHEADS',10)
+      NTRANSFF = kwargs.get('NTRANSFF',10)
+      TRANSFACT = kwargs.get('TRANSFACT',nn.GELU())
+      MLP = kwargs.get('MLP',10)
+      MLPD = kwargs.get('MLPD',10)
+      MLPACT = kwargs.get('MLPACT',nn.GELU())      
+      model = CellModel(num_tokens = pems.max_length, dim_token= pems.token_dim,
+                num_transformers = NTRANSF, num_heads = NHEADS, transformer_feed_forward= NTRANSFF, 
+                transformer_activation = TRANSFACT,
+                feed_forward = MLP, feed_forward_dim = MLPD, feed_forward_activation = MLPACT,
+                device = DEVICE, dtype = DTYPE)
+      
+    model.load_state_dict(torch.load(from_file, 
+                                 weights_only=True,
+                                 map_location=torch.device(DEVICE)), strict=False)
+    extra = {}
+    extra |= pems_get_config(pems)
+    extra |= kwargs
+    torch.save({
+        'config': get_config(model, **extra),
+        "weights": model.state_dict() }, 
+        to_file)
+    
+
+def setup(file, pems, DEVICE):
+    saved_config = torch.load(file)
+    print(saved_config['config'])
+    tmp = load_config(saved_config['config']).to(DEVICE)
+    tmp.load_state_dict(saved_config['weights'], strict=False)
+    pems = pems.to(DEVICE)
+    pems.steps_ahead = saved_config['config']['steps_ahead']
+    return tmp, pems
 
 
 class CellModel(nn.Module):

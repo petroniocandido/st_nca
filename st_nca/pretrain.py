@@ -82,7 +82,7 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
   if display is None:
     from IPython import display
 
-  batch_size = kwargs.get('batch', 10)
+  
 
   fig, ax = plt.subplots(1,3, figsize=(15, 5))
 
@@ -90,12 +90,20 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
   lr = kwargs.get('lr', 0.001)
   optimizer = kwargs.get('optim', optim.Adam(model.parameters(), lr=lr, weight_decay=0.0005))
 
-  train_ldr = DataLoader(dataset.train(), batch_size=batch_size, shuffle=True, num_workers=2)
-  test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True, num_workers=2)
-
   loss = nn.MSELoss()
   #mape = SymmetricMeanAbsolutePercentageError().to(DEVICE)
   mape = SMAPE
+
+  dynamic_batch = kwargs.get('dynamic_batch', False)
+
+  if dynamic_batch:
+    batch_schedule = [2048, 1024, 512, 256]
+    bucket = epochs // 4
+  else:
+    batch_size = kwargs.get('batch', 10)
+    train_ldr = DataLoader(dataset.train(), batch_size=batch_size, shuffle=True, num_workers=2)
+    test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True, num_workers=2)
+  
 
   error_train = []
   mape_train = []
@@ -107,6 +115,11 @@ def training_loop(DEVICE, dataset, model, display = None, **kwargs):
   for epoch in range(epochs):
 
     checkpoint(model, checkpoint_file)
+
+    if dynamic_batch:
+      batch_size = batch_schedule[epoch // bucket]
+      train_ldr = DataLoader(dataset.train(), batch_size=batch_size, shuffle=True, num_workers=2)
+      test_ldr = DataLoader(dataset.test(), batch_size=batch_size, shuffle=True, num_workers=2)
 
     errors_train, map_train, errors_val, map_val = train_step(DEVICE, train_ldr, test_ldr, model, loss, mape, optimizer)
 

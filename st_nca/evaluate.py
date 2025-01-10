@@ -53,7 +53,6 @@ def evaluate(dataset, gca, steps_ahead, increment_type='minutes', increment=5):
   rows = []
   with torch.no_grad():
     for ix in range(len(dataset) - increment * steps_ahead):
-      print(ix)
       X,y = dataset[ix]
       p = gca.run(str_to_datetime(X['timestamp']), X, iterations=steps_ahead, 
                   increment_type=increment_type, increment=increment, 
@@ -66,6 +65,22 @@ def evaluate(dataset, gca, steps_ahead, increment_type='minutes', increment=5):
         RMSE(y, p).cpu().item(), 
         nRMSE(y, p).cpu().item()]
         )
-      print(row)
+      rows.append(row)
+  return pd.DataFrame(rows, columns=columns)
+
+
+def residuals(dataset, gca, steps_ahead, increment_type='minutes', increment=5):
+  gca.eval()
+  columns = ['timestamp','residual']
+  rows = []
+  with torch.no_grad():
+    for ix in range(len(dataset) - increment * steps_ahead):
+      X,y = dataset[ix]
+      p = gca.run(str_to_datetime(X['timestamp']), X, iterations=steps_ahead, 
+                  increment_type=increment_type, increment=increment, 
+                  return_type='tensor').detach()
+      row = [get_timestamp(str_to_datetime(X['timestamp']),increment_type, increment * steps_ahead)]
+      
+      row.append(torch.median(y - p).cpu().item())
       rows.append(row)
   return pd.DataFrame(rows, columns=columns)

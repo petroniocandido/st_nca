@@ -11,10 +11,58 @@ from torch.utils.data import Dataset, DataLoader
 
 from tensordict import TensorDict
 
+from st_nca.datasets.PEMS import get_config as pems_get_config
 from st_nca.embeddings.temporal import str_to_datetime, from_datetime_to_pd
-from st_nca.cellmodel import CellModel
+from st_nca.cellmodel import CellModel, get_config as cell_model_get_config, load_config as cell_model_load_config
 from st_nca.tokenizer import NeighborhoodTokenizer
 
+def get_config(model, **extra):
+  cell_model_config = cell_model_get_config(model.cell_model)
+
+  gca_config = { 
+    'graph': model.graph, 
+    'max_lengh': model.max_lengh,
+    'token_size': model.token_size,
+    'tokenizer': model.tokenizer,
+    'cell_model': model.cell_model
+  }
+  cell_model_config |= gca_config 
+  cell_model_config |= extra
+  return cell_model_config
+
+
+def load_config(config):
+  return GraphCellularAutomata(graph = config.pop('graph',None), 
+                   max_lengh = config.pop('max_lengh',10),
+                   token_size = config.pop('token_size',10), 
+                   tokenizer = config.pop('tokenizer',None), 
+                   cell_model = cell_model_load_config(config),
+                   device = config.get('device',None), 
+                   dtype = config.get('dtype',torch.float32), 
+                   **config)
+
+
+def save(to_file, pems, model, **kwargs):
+    DEVICE = pems.device
+    DTYPE = pems.dtype
+    
+    extra = {}
+    extra |= pems_get_config(pems)
+    extra |= kwargs
+    torch.save({
+        'config': get_config(model, **extra),
+        "weights": model.state_dict() }, 
+        to_file)
+    
+
+def setup(file, pems, DEVICE):
+    saved_config = torch.load(file)
+    print(saved_config['config'])
+    tmp = load_config(saved_config['config']).to(DEVICE)
+    tmp.load_state_dict(saved_config['weights'], strict=False)
+    pems = pems.to(DEVICE)
+    pems.steps_ahead = saved_config['config']['steps_ahead']
+    return tmp, pems
 
 
 def get_timestamp(start_ts, increment_type, increment):

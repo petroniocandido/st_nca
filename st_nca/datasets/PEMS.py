@@ -31,12 +31,6 @@ class PEMSBase:
       self.steps_ahead = kwargs.get('steps_ahead',1)
 
       edges = pd.read_csv(kwargs.get('edges_file','edges.csv'), engine='pyarrow')
-      self.data = pd.read_csv(kwargs.get('data_file','data.csv'), engine='pyarrow')
-      self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
-
-      self.ztransform = ZTransform(torch.tensor(self.data[self.data.columns[1:]].values,
-                                                dtype=self.dtype, device=self.device),
-                                                dtype=self.dtype, device=self.device)
 
       # Create the graph
       self.G=nx.Graph()
@@ -44,6 +38,13 @@ class PEMSBase:
         self.G.add_edge(int(row[1]['source']),int(row[1]['target']), weight=row[1]['weight'])
 
       del(edges)
+
+      self.data = pd.read_csv(kwargs.get('data_file','data.csv'), engine='pyarrow')
+      self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
+
+      self.ztransform = ZTransform(torch.tensor(self.data[self.data.columns[1:]].values,
+                                                dtype=self.dtype, device=self.device),
+                                                dtype=self.dtype, device=self.device)
 
       self.latlon = kwargs.get("latlon",True)
 
@@ -128,8 +129,8 @@ class PEMSBase:
     # Will returna a SensorDataset filled with the sensor & neighbors preprocessed data (X)
     # and the expected values for t+y (y)
     def get_sensor_dataset(self, sensor, train = 0.7, dtype = torch.float64, **kwargs):
-      X = self.tokenizer.tokenize_all(self.data, sensor)[:-1]
-      y = torch.tensor(self.data[str(sensor)].values[1:], dtype=self.dtype, device=self.device)
+      X = self.tokenizer.tokenize_all(self.data, sensor)[:-self.steps_ahead]
+      y = torch.tensor(self.data[str(sensor)].values[self.steps_ahead:], dtype=self.dtype, device=self.device)
       return SensorDataset(str(sensor),X,y,train, dtype, num_features = self.num_sensors,
                            max_length=self.max_length, token_dim=self.token_dim,
                            value_index=self.value_index, **kwargs)
@@ -139,8 +140,8 @@ class PEMSBase:
       y = None
       try:
         for sensor in sensors:
-          tmpX = self.tokenizer.tokenize_all(self.data, sensor)[:-1]
-          tmpy = torch.tensor(self.data[str(sensor)].values[1:], dtype=self.dtype, device=self.device)
+          tmpX = self.tokenizer.tokenize_all(self.data, sensor)[:-self.steps_ahead]
+          tmpy = torch.tensor(self.data[str(sensor)].values[self.steps_ahead:], dtype=self.dtype, device=self.device)
           if X is None:
             X = tmpX
             y = tmpy
