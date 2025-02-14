@@ -20,11 +20,11 @@ class NeighborhoodTokenizer(nn.Module):
     self.max_length = kwargs.get('max_length',None)
     self.token_dim = kwargs.get('token_dim',None)
 
-    self.ztransform = kwargs.get('ztransform',None)
+    self.value_embedder = kwargs.get('value_embedder',None)
     self.spatial_embedding = kwargs.get('spatial_embedding',None)
     self.temporal_embedding = kwargs.get('temporal_embedding',None)
 
-  def normalized_data(self, data, sensor):
+  def embedded_data(self, data, sensor):
     if isinstance(data, pd.DataFrame):
       values = data[str(sensor)].values
     elif isinstance(data, TensorDict):
@@ -32,9 +32,9 @@ class NeighborhoodTokenizer(nn.Module):
     elif isinstance(data, TensorDictDataframe):
       values = data[str(sensor)]
                 
-    return self.ztransform(torch.tensor(values, dtype=self.dtype, device=self.device))
+    return self.value_embedder(torch.tensor(values, dtype=self.dtype, device=self.device))
     
-  def normalized_sample(self, data, sensor, index):
+  def embedded_sample(self, data, sensor, index):
     if isinstance(data, pd.DataFrame):
       value = torch.tensor(data[str(sensor)].values[index], dtype=self.dtype, device=self.device)
     elif isinstance(data, TensorDict):
@@ -42,11 +42,11 @@ class NeighborhoodTokenizer(nn.Module):
     elif isinstance(data, TensorDictDataframe):
       value = data[str(sensor), index]
 
-    return self.ztransform(value)
+    return self.value_embedder(value)
   
   
   def tokenize(self, timestamp, values, node):
-    val = self.ztransform(values[str(node)])
+    val = self.value_embedder(values[str(node)])
     tim_emb = self.temporal_embedding(timestamp)
 
     tokens = self.spatial_embedding[node]
@@ -58,7 +58,7 @@ class NeighborhoodTokenizer(nn.Module):
     for neighbor in self.graph.neighbors(node):
       m += 1
       tokens = torch.hstack([tokens, self.spatial_embedding[neighbor]])
-      tokens = torch.hstack([tokens, self.ztransform(values[str(neighbor)])])
+      tokens = torch.hstack([tokens, self.value_embedder(values[str(neighbor)])])
       tokens = torch.hstack([tokens, tim_emb])
 
     tokens = tokens.reshape(1, m, self.token_dim)
@@ -73,7 +73,7 @@ class NeighborhoodTokenizer(nn.Module):
   # in the tokens, together with the spatial and temporal embeddings
   def tokenize_all(self, data, sensor):
 
-    tmp = self.normalized_data(data, sensor)
+    tmp = self.embedded_data(data, sensor)
     n = len(tmp)
     tim_emb = self.temporal_embedding.all().reshape(n,2)
     
@@ -86,7 +86,7 @@ class NeighborhoodTokenizer(nn.Module):
     for neighbor in self.graph.neighbors(sensor):
       m += 1
       tokens = torch.hstack([tokens, self.spatial_embedding[neighbor].repeat(n,1)])
-      tokens = torch.hstack([tokens, self.normalized_data(data, neighbor).reshape(n,1) ])
+      tokens = torch.hstack([tokens, self.embedded_data(data, neighbor).reshape(n,1) ])
       tokens = torch.hstack([tokens, tim_emb])
 
     tokens = tokens.reshape(n, m, self.token_dim)
@@ -109,7 +109,7 @@ class NeighborhoodTokenizer(nn.Module):
     tim_emb = self.temporal_embedding[dt]
 
     tokens = self.spatial_embedding[node]
-    tokens = torch.hstack([tokens, self.normalized_sample(data, node, index)])
+    tokens = torch.hstack([tokens, self.embedded_sample(data, node, index)])
     tokens = torch.hstack([tokens, tim_emb])
 
     m = 1
@@ -117,7 +117,7 @@ class NeighborhoodTokenizer(nn.Module):
     for neighbor in self.graph.neighbors(node):
       m += 1
       tokens = torch.hstack([tokens, self.spatial_embedding[neighbor]])
-      tokens = torch.hstack([tokens, self.normalized_sample(data, neighbor, index)])
+      tokens = torch.hstack([tokens, self.embedded_sample(data, neighbor, index)])
       tokens = torch.hstack([tokens, tim_emb])
 
     tokens = tokens.reshape(1, m, self.token_dim)
@@ -139,7 +139,7 @@ class NeighborhoodTokenizer(nn.Module):
       self.device = args[0]
     else:
       self.dtype = args[0]
-    self.ztransform = self.ztransform.to(*args, **kwargs)
+    self.value_embedder = self.value_embedder.to(*args, **kwargs)
     self.spatial_embedding = self.spatial_embedding.to(*args, **kwargs)
     self.temporal_embedding = self.temporal_embedding.to(*args, **kwargs)
     return self

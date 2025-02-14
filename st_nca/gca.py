@@ -21,7 +21,7 @@ def get_config(model, **extra):
 
   gca_config = { 
     'graph': model.graph, 
-    'max_lengh': model.max_lengh,
+    'max_length': model.max_length,
     'token_size': model.token_size,
     'tokenizer': model.tokenizer,
     'cell_model': model.cell_model
@@ -36,9 +36,9 @@ def load_config(config):
                    max_lengh = config.pop('max_lengh',10),
                    token_size = config.pop('token_size',10), 
                    tokenizer = config.pop('tokenizer',None), 
-                   cell_model = cell_model_load_config(config),
-                   device = config.get('device',None), 
-                   dtype = config.get('dtype',torch.float32), 
+                   cell_model = config.pop('cell_model',None),
+                   device = config.pop('device',None), 
+                   dtype = config.pop('dtype',torch.float32), 
                    **config)
 
 

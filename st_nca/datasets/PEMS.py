@@ -7,7 +7,7 @@ import torch
 
 from st_nca.embeddings.temporal import TemporalEmbedding, to_pandas_datetime
 from st_nca.embeddings.spatial import SpatialEmbedding
-from st_nca.embeddings.normalization import ZTransform
+from st_nca.embeddings.value import ValueEmbedding
 from st_nca.tokenizer import NeighborhoodTokenizer
 
 from st_nca.common import TensorDictDataframe
@@ -17,7 +17,8 @@ from st_nca.datasets.datasets import SensorDataset, AllSensorDataset
 
 def get_config(pems):
   return {
-    'steps_ahead': pems.steps_ahead
+    'steps_ahead': pems.steps_ahead,
+    'value_embedding_type': pems.tokenizer.value_embedder.type
   }
 
 
@@ -42,9 +43,9 @@ class PEMSBase:
       self.data = pd.read_csv(kwargs.get('data_file','data.csv'), engine='pyarrow')
       self.data['timestamp'] = to_pandas_datetime(self.data['timestamp'].values)
 
-      self.ztransform = ZTransform(torch.tensor(self.data[self.data.columns[1:]].values,
+      self.value_embedder = ValueEmbedding(torch.tensor(self.data[self.data.columns[1:]].values,
                                                 dtype=self.dtype, device=self.device),
-                                                dtype=self.dtype, device=self.device)
+                                                **kwargs)
 
       self.latlon = kwargs.get("latlon",True)
 
@@ -93,7 +94,7 @@ class PEMSBase:
                                              graph = self.G, num_nodes = self.num_sensors,
                                              max_length = self.max_length, 
                                              token_dim = self.token_dim, 
-                                             ztransform = self.ztransform,
+                                             value_embedder = self.value_embedder,
                                              spatial_embedding = self.node_embeddings,
                                              temporal_embedding = self.time_embeddings)
       
