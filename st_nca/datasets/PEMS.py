@@ -8,7 +8,7 @@ import torch
 from st_nca.embeddings.temporal import TemporalEmbedding, to_pandas_datetime
 from st_nca.embeddings.spatial import SpatialEmbedding
 from st_nca.embeddings.value import ValueEmbedding
-from st_nca.tokenizer import NeighborhoodTokenizer
+from st_nca.notebooks.tokenizer import NeighborhoodTokenizer
 
 from st_nca.common import TensorDictDataframe
 

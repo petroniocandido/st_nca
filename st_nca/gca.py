@@ -14,7 +14,7 @@ from tensordict import TensorDict
 from st_nca.datasets.PEMS import get_config as pems_get_config
 from st_nca.embeddings.temporal import str_to_datetime, from_datetime_to_pd
 from st_nca.cellmodel import CellModel, get_config as cell_model_get_config, load_config as cell_model_load_config
-from st_nca.tokenizer import NeighborhoodTokenizer
+from st_nca.notebooks.tokenizer import NeighborhoodTokenizer
 
 def get_config(model, **extra):
   cell_model_config = cell_model_get_config(model.cell_model)
