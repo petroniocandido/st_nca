@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from normalization import ZTransform
-from scaling import ScalingTransform
+from st_nca.embeddings.normalization import ZTransform
+from st_nca.embeddings.scaling import ScalingTransform
 
 class ValueEmbedding(nn.Module):
   def __init__(self, data, **kwargs):

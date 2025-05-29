@@ -22,7 +22,6 @@ def load_config(config):
                    dtype = config.pop('dtype',torch.float32), 
                    **config)
 
-
 def get_config(model, **extra):
   a = transformer_get_config(model.transformers[0])
   b = { 
@@ -72,7 +71,6 @@ def save_as(from_file, to_file, pems, **kwargs):
         "weights": model.state_dict() }, 
         to_file)
     
-
 def setup(file, pems, DEVICE):
     saved_config = torch.load(file)
     print(saved_config['config'])
@@ -81,7 +79,6 @@ def setup(file, pems, DEVICE):
     pems = pems.to(DEVICE)
     pems.steps_ahead = saved_config['config']['steps_ahead']
     return tmp, pems
-
 
 class CellModel(nn.Module):
   def __init__(self, num_tokens, dim_token,
